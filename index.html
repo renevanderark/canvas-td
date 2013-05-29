@@ -1,0 +1,332 @@
+<html>
+<head>
+	<script type="text/javascript" src="http://canvg.googlecode.com/svn/trunk/rgbcolor.js"></script> 
+	<script type="text/javascript" src="http://canvg.googlecode.com/svn/trunk/StackBlur.js"></script>
+	<script type="text/javascript" src="http://canvg.googlecode.com/svn/trunk/canvg.js"></script> 
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" ></script>
+
+	<script type="text/javascript">
+		var settings = {
+			scaleFactor: 1.0
+		};
+
+
+		var Sprite = function(svg, w, h, scaleFactor) {
+			var canvas = null;
+			this.init = function() {
+				canvas = document.createElement('canvas');
+				var ctx = canvas.getContext('2d');
+				ctx.width = w;
+				ctx.height = h;
+				ctx.drawSvg(svg, 0, 0, w / settings.scaleFactor, h / settings.scaleFactor);
+			}
+
+			this.draw = function(ctx, x, y, ang) {
+				ctx.save();
+				ctx.translate((x+(w/2)) / settings.scaleFactor, (y+(h/2)) / settings.scaleFactor);
+				ctx.rotate(ang * (Math.PI / 180));
+				ctx.drawImage(canvas, -(w/2) / settings.scaleFactor, -(h/2) / settings.scaleFactor);
+				ctx.restore();
+			}
+			this.getW = function() { return w; }
+			this.getH = function() { return h; }
+			this.init();
+		}
+
+		var sprites = {
+			creep: new Sprite("creep.svg", 8, 8),
+			pelletTower:  new Sprite("pellet.svg", 20, 20)
+		};
+
+		var Grid = function(ctx, options) {
+			var opts = options || {};
+			var width = opts.width || 32;
+			var height = opts.height || 32;
+			var ghost = {x : -1, y : -1, w : 2, h : 2};
+			var occupiedSquares = [];
+
+			this.setGhost = function(dims) {
+				ghost.x = dims.x;
+				ghost.y = dims.y;
+				ghost.w = dims.w || ghost.w;
+				ghost.h = dims.h || ghost.h;
+			};
+
+			this.getGhost = function() { return ghost; };
+
+			this.draw = function() {
+				ctx.beginPath();
+				ctx.strokeStyle = "black";
+				ctx.lineWidth = 0.1;
+				for(x = 10; x <= 320; x += 10) {
+					ctx.moveTo(0, x / settings.scaleFactor);
+					ctx.lineTo(320 / settings.scaleFactor, x / settings.scaleFactor);
+					ctx.moveTo(x / settings.scaleFactor, 0);
+					ctx.lineTo(x / settings.scaleFactor, 320 / settings.scaleFactor);
+				}
+				ctx.stroke();	
+
+				if(ghost.x > -1 && ghost.y > -1) {
+					ctx.beginPath();
+					ctx.strokeStyle = "black";
+					ctx.lineWidth = 0.2;
+					ctx.rect(ghost.x * 10 / settings.scaleFactor, 
+						ghost.y * 10 / settings.scaleFactor, 
+						ghost.w * 10 / settings.scaleFactor,
+						ghost.h * 10 / settings.scaleFactor);
+					ctx.stroke();
+				}
+
+
+				ctx.lineWidth = 1;
+				ctx.strokeStyle = "#f00";
+				ctx.beginPath();
+				for(i in occupiedSquares) {
+					ctx.rect(
+						occupiedSquares[i].x * 10 / settings.scaleFactor, 
+						occupiedSquares[i].y * 10 / settings.scaleFactor, 
+						10 / settings.scaleFactor,
+						10 / settings.scaleFactor);
+				}
+				ctx.stroke();
+			};
+
+			this.occupy = function(spaces) {
+				for(x = spaces.x; x < spaces.x + spaces.w; x++) {
+					for(y = spaces.y; y < spaces.y + spaces.h; y++) {
+						occupiedSquares.push({x:x, y:y});
+					}
+				}
+			};
+
+			this.getPath = function(from, to) {
+				function inList(pos, list) {
+					for(i in list) {
+						if(list[i].x == pos.x && list[i].y == pos.y) {
+							return true;
+						}
+					}
+					return false;
+				}
+				
+				function available(pos, list) {
+					return !inList(pos, openList) && !inList(pos, closedList) && !inList(pos, occupiedSquares);
+				}
+
+				function getAdjacent(pos, list) {
+					var left = { x : pos.x - 1, y : pos.y, parent : pos, gScore : 10 };
+					var right = { x : pos.x + 1, y : pos.y, parent : pos, gScore : 10 };
+					var up = { x : pos.x, y : pos.y - 1, parent : pos, gScore : 10 };
+					var down = { x : pos.x, y : pos.y + 1, parent : pos, gScore : 10 };
+
+					if(left.x > -1 && available(left, list)) { list.push(left); }
+					if(right.x < width && available(right, list)) { list.push(right); }
+					if(up.y > -1 && available(up, list)) { list.push(up); }
+					if(down.y < height && available(down, list)) { list.push(down); }
+
+					var tl = { x : pos.x - 1, y : pos.y - 1, parent : pos, gScore : 14 };
+					var tr = { x : pos.x + 1, y : pos.y - 1, parent : pos, gScore : 14 };
+					var bl = { x : pos.x - 1, y : pos.y + 1, parent : pos, gScore : 14 };
+					var br = { x : pos.x + 1, y : pos.y + 1, parent : pos, gScore : 14 };
+
+					if(tl.x > -1 && tl.y > -1 && available(tl, list)) { list.push(tl); }
+					if(tr.x < width && tr.y > -1 && available(tr, list)) { list.push(tr); }
+					if(bl.x > -1 && bl.y < height && available(bl, list)) { list.push(bl); }
+					if(br.x < width && br.y < height && available(br, list)) { list.push(br); }
+
+				}
+
+				function getScores(list) {
+					for(i in list) {
+						var deltaX = to.x - list[i].x;
+						var deltaY = to.y - list[i].y;
+						if(deltaX < 0) { deltaX = -deltaX; }
+						if(deltaY < 0) { deltaY = -deltaY; }
+						list[i].score = list[i].gScore + deltaX * 10 + deltaY * 10;
+					}
+				}
+
+				var openList = [from];
+				var closedList = [];
+				var current = {x: -1, y: -1};
+				while(openList.length > 0 && !(current.x == to.x && current.y == to.y)) {				
+					current = openList.shift();
+					closedList.push(current);
+					getAdjacent(current, openList);
+					getScores(openList);
+					openList.sort(function(a,b) { return a.score - b.score});
+				}
+				if(openList.length == 0) { return []; }
+				var finalList = [];
+				current = closedList.pop();
+				while(current.parent) {
+					finalList.push(current);
+					current = current.parent;
+				}
+				return finalList.reverse();
+			};
+		};
+
+		var GameObject = function(sprite, ctx, options) {
+			var opts = options || {};
+			var ang = opts.angle || 0;
+			var x = opts.x || 0;
+			var y = opts.y || 0;
+			var path = [];
+
+			this.draw = function() {
+				sprite.draw(ctx, x - (sprite.getW()/2), y - (sprite.getH()/2), ang);
+			}
+
+			this.getX = function() { return x; };
+			this.getY = function() { return y; };
+
+			this.getPathTo = function(grid, target) {
+				path = grid.getPath({x : Math.floor(x / 10), y : Math.floor(y / 10) }, target);
+			};
+
+			/** Action queue targets; returning true means target is achieved and action can be removed from the queue **/
+			this.followPath = function(spd) {
+				if(path.length == 0) { return true; }
+				var t = path[0];
+				if(this.moveTo(t.x * 10 + 5, t.y * 10 + 5, spd)) {
+					path.shift();
+				}
+				return false;
+			};
+
+			this.moveTo = function(targetX, targetY, spd) {
+				var speed = spd || 1.0
+				var deltaX = targetX - x;
+				var deltaY = targetY - y;
+				var mag = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
+				ang = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
+				var nextX = x + ((deltaX / mag) * speed);
+				var nextY = y + ((deltaY / mag) * speed);
+				if(nextX - targetX > -1 && nextX - targetX < 1 && nextY - targetY > -1 && nextY - targetY < 1) {
+					x = targetX; y = targetY;
+					return true;
+				}
+				x = nextX; y = nextY;
+				return false;
+			};
+
+			this.moveToOther = function(otherObject, spd) {
+				return this.moveTo(otherObject.getX(), otherObject.getY(), spd);
+			};
+
+			this.pointTo = function(otherObject) {
+				var deltaX = otherObject.getX() - x;
+				var deltaY = otherObject.getY() - y;
+				ang = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
+				return false;
+			};			
+		}
+
+		function doResize() {
+			var c = $('#canvas')[0];
+			var ww = (window.innerWidth || document.body.clientWidth) - 50;
+			var wh = (window.innerHeight || document.body.clientHeight) - 50;
+			c.width =  (ww > wh ? wh : ww);
+			c.height = c.width;
+			settings.scaleFactor = 320 / c.width;
+			sprites.creep.init();
+			sprites.pelletTower.init();
+		}
+
+		$(window).resize(doResize);
+
+		$(document).ready(function() {
+			var c = $('#canvas')[0];
+			doResize();
+			var ctx = c.getContext('2d');
+
+			var grid = new Grid(ctx);
+			var path = [];
+			var creep = new GameObject(sprites.creep, ctx, {x: 300, y: 200});
+			var creep2 = new GameObject(sprites.creep, ctx, {x: 0, y: 0});
+			var pelletTower = new GameObject(sprites.pelletTower, ctx, {x: 150, y: 150});
+			grid.occupy({x: 14, y: 14, w: 2, h: 2});
+			grid.occupy({x: 1, y: 0, w: 2, h : 5});
+
+			grid.occupy({x:4, y: 2, w: 2, h : 30});
+
+			var target = {x : 0, y : 0};
+
+			var gameObjects = [creep, creep2, pelletTower];
+			function drawCanvas() {
+				ctx.clearRect(0,0, c.width, c.height);	
+				grid.draw();
+				
+				ctx.beginPath();
+				ctx.lineWidth = 1;
+				ctx.strokeStyle = "#00f";
+				ctx.moveTo((target.x * 10+5) / settings.scaleFactor - 5, (target.y * 10+5)  / settings.scaleFactor);
+				ctx.lineTo((target.x * 10+5) / settings.scaleFactor + 5 , (target.y * 10+5) / settings.scaleFactor);
+				ctx.moveTo((target.x * 10+5) / settings.scaleFactor, (target.y * 10+5) / settings.scaleFactor - 5);
+				ctx.lineTo((target.x * 10+5) / settings.scaleFactor, (target.y * 10+5) / settings.scaleFactor + 5);
+				ctx.stroke();	
+		
+
+				for(x in gameObjects) { gameObjects[x].draw(); }
+
+			}
+
+
+
+			var actionQueue = [];
+			$("#canvas").on("click", function(e) {
+//				astarPath = grid.getPath({x: 0, y : 0}, {x : grid.getGhost().x, y : grid.getGhost().y});
+
+				target = {x: grid.getGhost().x, y : grid.getGhost().y};
+				creep.getPathTo(grid, target);
+				creep2.getPathTo(grid, target);
+				actionQueue = [
+					function() { return pelletTower.pointTo(creep2); },
+					function() { return creep.followPath(1.4); },
+					function() { return creep2.followPath(); }
+				];
+			});
+
+			$("#canvas").on("mouseout", function(e) {
+				grid.setGhost({ x : -1, y : -1 });
+			});
+
+			$("#canvas").on("mousemove", function(e) {
+				var parentOffset = $(this).offset(); 
+				grid.setGhost({
+					x : Math.floor(((e.pageX - parentOffset.left) * settings.scaleFactor) / 10),
+					y : Math.floor(((e.pageY - parentOffset.top) * settings.scaleFactor) / 10)
+				});
+			});
+
+			function processActionQueue() {
+
+				for(x in actionQueue) {
+					if(actionQueue[x]()) { actionQueue.splice(x, 1); }
+				}
+			}
+
+			
+			function processTick() {
+				var startTime = new Date().getTime();
+				var maxInterval = 25;
+				processActionQueue();
+				drawCanvas();
+
+				var elapsedTime = new Date().getTime() - startTime;
+//				console.log(maxInterval - (elapsedTime > maxInterval ? maxInterval : elapsedTime));
+				setTimeout(processTick, maxInterval - (elapsedTime > maxInterval ? 0 : elapsedTime));
+			}
+			processTick();
+		});
+
+	</script>
+</head>
+<body >
+<canvas id="canvas" style="border: 1px solid; margin: 0">
+
+</canvas>
+</body>
+
+</html>
