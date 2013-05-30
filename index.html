@@ -1,9 +1,9 @@
 <html>
 <head>
-	<script type="text/javascript" src="http://canvg.googlecode.com/svn/trunk/rgbcolor.js"></script> 
-	<script type="text/javascript" src="http://canvg.googlecode.com/svn/trunk/StackBlur.js"></script>
-	<script type="text/javascript" src="http://canvg.googlecode.com/svn/trunk/canvg.js"></script> 
+	<script type="text/javascript" src="rgbcolor.js"></script> 
+	<script type="text/javascript" src="canvg.js"></script> 
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" ></script>
+	<meta name="viewport" content="width=device-width, initial-scale=0.5, user-scalable=no"/>
 
 	<script type="text/javascript">
 		var settings = {
@@ -27,6 +27,12 @@
 				ctx.rotate(ang * (Math.PI / 180));
 				ctx.drawImage(canvas, -(w/2) / settings.scaleFactor, -(h/2) / settings.scaleFactor);
 				ctx.restore();
+				return {
+					x : Math.ceil(x / settings.scaleFactor) - 2, 
+					y : Math.ceil(y / settings.scaleFactor) - 2,
+					w : Math.ceil(w / settings.scaleFactor) + 4,
+					h : Math.ceil(h / settings.scaleFactor) + 4,
+				};
 			}
 			this.getW = function() { return w; }
 			this.getH = function() { return h; }
@@ -44,6 +50,7 @@
 			var height = opts.height || 32;
 			var ghost = {x : -1, y : -1, w : 2, h : 2};
 			var occupiedSquares = [];
+			var clearGhostRect = null;
 
 			this.setGhost = function(dims) {
 				ghost.x = dims.x;
@@ -54,31 +61,30 @@
 
 			this.getGhost = function() { return ghost; };
 
-			this.draw = function() {
-				ctx.beginPath();
-				ctx.strokeStyle = "black";
-				ctx.lineWidth = 0.1;
-				for(x = 10; x <= 320; x += 10) {
-					ctx.moveTo(0, x / settings.scaleFactor);
-					ctx.lineTo(320 / settings.scaleFactor, x / settings.scaleFactor);
-					ctx.moveTo(x / settings.scaleFactor, 0);
-					ctx.lineTo(x / settings.scaleFactor, 320 / settings.scaleFactor);
+			this.clearGhost = function() {
+				if(clearGhostRect) {
+					ctx.clearRect(clearGhostRect.x, clearGhostRect.y, clearGhostRect.w, clearGhostRect.h);
 				}
-				ctx.stroke();	
+			};
 
+			this.drawGhost = function() { 
 				if(ghost.x > -1 && ghost.y > -1) {
-					ctx.beginPath();
-					ctx.strokeStyle = "black";
-					ctx.lineWidth = 0.2;
-					ctx.rect(ghost.x * 10 / settings.scaleFactor, 
+					ctx.fillStyle = "#ddd";	
+					ctx.fillRect(ghost.x * 10 / settings.scaleFactor, 
 						ghost.y * 10 / settings.scaleFactor, 
 						ghost.w * 10 / settings.scaleFactor,
 						ghost.h * 10 / settings.scaleFactor);
-					ctx.stroke();
+
+					clearGhostRect = { 
+						x: Math.ceil(ghost.x * 10 / settings.scaleFactor) - 1, 
+						y: Math.ceil(ghost.y * 10 / settings.scaleFactor) - 1, 
+						w: Math.ceil(ghost.w * 10 / settings.scaleFactor) + 2,
+						h: Math.ceil(ghost.h * 10 / settings.scaleFactor) + 2
+					};
 				}
+			};
 
-
-				ctx.lineWidth = 1;
+			this.drawOccupied = function() {
 				ctx.strokeStyle = "#f00";
 				ctx.beginPath();
 				for(i in occupiedSquares) {
@@ -89,6 +95,20 @@
 						10 / settings.scaleFactor);
 				}
 				ctx.stroke();
+			};
+
+			this.draw = function() {
+				ctx.beginPath();
+				ctx.strokeStyle = "black";
+				ctx.lineWidth = 0.2;
+				for(x = 10; x <= 320; x += 10) {
+					ctx.moveTo(0, x / settings.scaleFactor);
+					ctx.lineTo(320 / settings.scaleFactor, x / settings.scaleFactor);
+					ctx.moveTo(x / settings.scaleFactor, 0);
+					ctx.lineTo(x / settings.scaleFactor, 320 / settings.scaleFactor);
+				}
+				ctx.stroke();	
+				ctx.lineWidth = 1;
 			};
 
 			this.occupy = function(spaces) {
@@ -146,6 +166,7 @@
 					}
 				}
 
+				if(inList(to, occupiedSquares)) { return []; }
 				var openList = [from];
 				var closedList = [];
 				var current = {x: -1, y: -1};
@@ -173,9 +194,16 @@
 			var x = opts.x || 0;
 			var y = opts.y || 0;
 			var path = [];
+			var clearRect = null;
 
+
+			this.clear = function() {
+				if(clearRect) {
+					ctx.clearRect(clearRect.x, clearRect.y, clearRect.w, clearRect.h);
+				}
+			}
 			this.draw = function() {
-				sprite.draw(ctx, x - (sprite.getW()/2), y - (sprite.getH()/2), ang);
+				clearRect = sprite.draw(ctx, x - (sprite.getW()/2), y - (sprite.getH()/2), ang);
 			}
 
 			this.getX = function() { return x; };
@@ -236,6 +264,15 @@
 
 		$(window).resize(doResize);
 
+		window.requestAnimFrame = (function(){
+		  return  window.requestAnimationFrame       ||
+			  window.webkitRequestAnimationFrame ||
+			  window.mozRequestAnimationFrame    ||
+			  function( callback ){
+			    window.setTimeout(callback, 1000 / 60);
+			  };
+		})();
+
 		$(document).ready(function() {
 			var c = $('#canvas')[0];
 			doResize();
@@ -247,43 +284,28 @@
 			var creep2 = new GameObject(sprites.creep, ctx, {x: 0, y: 0});
 			var pelletTower = new GameObject(sprites.pelletTower, ctx, {x: 150, y: 150});
 			grid.occupy({x: 14, y: 14, w: 2, h: 2});
-			grid.occupy({x: 1, y: 0, w: 2, h : 5});
-
-			grid.occupy({x:4, y: 2, w: 2, h : 30});
 
 			var target = {x : 0, y : 0};
 
 			var gameObjects = [creep, creep2, pelletTower];
 			function drawCanvas() {
-				ctx.clearRect(0,0, c.width, c.height);	
-				grid.draw();
-				
-				ctx.beginPath();
-				ctx.lineWidth = 1;
-				ctx.strokeStyle = "#00f";
-				ctx.moveTo((target.x * 10+5) / settings.scaleFactor - 5, (target.y * 10+5)  / settings.scaleFactor);
-				ctx.lineTo((target.x * 10+5) / settings.scaleFactor + 5 , (target.y * 10+5) / settings.scaleFactor);
-				ctx.moveTo((target.x * 10+5) / settings.scaleFactor, (target.y * 10+5) / settings.scaleFactor - 5);
-				ctx.lineTo((target.x * 10+5) / settings.scaleFactor, (target.y * 10+5) / settings.scaleFactor + 5);
-				ctx.stroke();	
-		
-
+				grid.clearGhost();
+				for(x in gameObjects) { gameObjects[x].clear(); }
+				grid.drawGhost();
 				for(x in gameObjects) { gameObjects[x].draw(); }
-
 			}
 
 
 
 			var actionQueue = [];
 			$("#canvas").on("click", function(e) {
-//				astarPath = grid.getPath({x: 0, y : 0}, {x : grid.getGhost().x, y : grid.getGhost().y});
 
 				target = {x: grid.getGhost().x, y : grid.getGhost().y};
 				creep.getPathTo(grid, target);
 				creep2.getPathTo(grid, target);
 				actionQueue = [
 					function() { return pelletTower.pointTo(creep2); },
-					function() { return creep.followPath(1.4); },
+					function() { return creep.followPath(1.8); },
 					function() { return creep2.followPath(); }
 				];
 			});
@@ -309,14 +331,15 @@
 
 			
 			function processTick() {
-				var startTime = new Date().getTime();
-				var maxInterval = 25;
+				requestAnimFrame(processTick);
+//				var startTime = new Date().getTime();
+//				var maxInterval = 25;
 				processActionQueue();
 				drawCanvas();
 
-				var elapsedTime = new Date().getTime() - startTime;
+//				var elapsedTime = new Date().getTime() - startTime;
 //				console.log(maxInterval - (elapsedTime > maxInterval ? maxInterval : elapsedTime));
-				setTimeout(processTick, maxInterval - (elapsedTime > maxInterval ? 0 : elapsedTime));
+//				setTimeout(processTick, maxInterval - (elapsedTime > maxInterval ? 0 : elapsedTime));
 			}
 			processTick();
 		});
@@ -324,9 +347,10 @@
 	</script>
 </head>
 <body >
-<canvas id="canvas" style="border: 1px solid; margin: 0">
-
+<canvas id="bg" style="position absolute; z-index: 0; left: 0; top: 0"></canvas>
+<canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 0">
 </canvas>
+
 </body>
 
 </html>
