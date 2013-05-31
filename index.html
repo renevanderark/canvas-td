@@ -10,6 +10,7 @@
 			scaleFactor: 1.0
 		};
 
+		var drawQueue = [];
 
 		var Sprite = function(svg, w, h, scaleFactor) {
 			var canvas = null;
@@ -40,10 +41,10 @@
 				drawImage(ctx);
 				ctx.restore();
 				return {
-					x : Math.ceil(x / settings.scaleFactor) - 2, 
-					y : Math.ceil(y / settings.scaleFactor) - 2,
-					w : Math.ceil(w / settings.scaleFactor) + 4,
-					h : Math.ceil(h / settings.scaleFactor) + 4,
+					x : Math.ceil(x / settings.scaleFactor), 
+					y : Math.ceil(y / settings.scaleFactor),
+					w : Math.ceil(w / settings.scaleFactor),
+					h : Math.ceil(h / settings.scaleFactor),
 				};
 			}
 			this.getW = function() { return w; }
@@ -221,16 +222,17 @@
 			var y = opts.y || 0;
 			var path = [];
 			var clearRect = null;
+			var bgBuf = document.createElement("canvas");
 			var updated = true;
 
 
-			this.clear = function() {
+			this.clear = function(force) {
 				if(updated && clearRect) {
 					ctx.clearRect(clearRect.x, clearRect.y, clearRect.w, clearRect.h);
 				}
 			}
-			this.draw = function() {
-				if(updated) {
+			this.draw = function(force) {
+				if(updated || force) {
 					clearRect = sprite.draw(ctx, x - (sprite.getW()/2), y - (sprite.getH()/2), ang);
 					updated = false;
 				}
@@ -326,6 +328,8 @@
 			var wh = (window.innerHeight || document.body.clientHeight) - 50;
 			c.width =  (ww > wh ? wh : ww);
 			c.height = c.width;
+			$('#bg')[0].width = c.width;
+			$('#bg')[0].height = c.height;
 			settings.scaleFactor = 320 / c.width;
 			sprites.creep.init();
 			sprites.pelletTower.init();
@@ -347,18 +351,17 @@
 			doResize();
 			var ctx = c.getContext('2d');
 
-			var grid = new Grid(ctx);
+			var grid = new Grid($('#bg')[0].getContext('2d'));
 			var path = [];
 			var creep = new GameObject(sprites.creep, ctx, {x: 300, y: 200});
 			var creep2 = new GameObject(sprites.creep, ctx, {x: 0, y: 0});		
 
-			var gameObjects = [creep, creep2];
+			var creeps = [creep, creep2];
 			var towers = [];
 			for(var x = 1; x < 30; x+= 2) {
 				for(var y = 1; y < 30; y += 4) {
 					var pelletTower = new PelletTower({context: ctx, grid: grid, x: x, y: y});
 					if(pelletTower.place()) {
-						gameObjects.push(pelletTower.getGameObject());
 						towers.push(pelletTower);
 					} else {
 						console.log("BLOCKING");
@@ -367,13 +370,6 @@
 			}
 
 			var target = {x : 0, y : 0};
-
-			function drawCanvas() {
-//				grid.clearGhost();
-				for(var x in gameObjects) { gameObjects[x].clear(); }
-//				grid.drawGhost();
-				for(var x in gameObjects) { gameObjects[x].draw(); }
-			}
 
 
 
@@ -414,22 +410,38 @@
 				}
 			}
 
+			function drawCanvas() {
+				grid.clearGhost();
+				grid.drawGhost();
+				for(var x in towers) { 
+					towers[x].getGameObject().clear();
+					towers[x].getGameObject().draw(); 
+				}
+
+				for(var x in creeps) { creeps[x].clear(); }
+				for(var x in creeps) { 
+					creeps[x].draw(true); 
+				}
+				requestAnimFrame(drawCanvas);
+			}
+
 			function processTick() {
-//				requestAnimFrame(processTick);
 				var startTime = new Date().getTime();
-				var maxInterval = 25;
+				var maxInterval = 15;
 				processActionQueue();
-				drawCanvas();
 
 				var elapsedTime = new Date().getTime() - startTime;
 				setTimeout(processTick, maxInterval - (elapsedTime > maxInterval ? 0 : elapsedTime));
 			}
 			processTick();
+			drawCanvas();
 		});
 
 	</script>
 </head>
 <body >
+<canvas id="bg" style="border: 1px solid; margin: 0; position: absolute; z-index: 0; left: 0; top: 0">
+</canvas>
 <canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 0">
 </canvas>
 
