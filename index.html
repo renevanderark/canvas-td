@@ -21,11 +21,23 @@
 				ctx.drawSvg(svg, 0, 0, w / settings.scaleFactor, h / settings.scaleFactor);
 			}
 
+			function rotate(ctx, ang) {
+				ctx.rotate(ang * (Math.PI / 180));
+			}
+
+			function translate(ctx, x, y) {
+				ctx.translate((x+(w/2)) / settings.scaleFactor, (y+(h/2)) / settings.scaleFactor);
+			}
+
+			function drawImage(ctx) {
+				ctx.drawImage(canvas, Math.floor(-(w/2) / settings.scaleFactor), Math.floor(-(h/2) / settings.scaleFactor));
+			}
+
 			this.draw = function(ctx, x, y, ang) {
 				ctx.save();
-				ctx.translate((x+(w/2)) / settings.scaleFactor, (y+(h/2)) / settings.scaleFactor);
-				ctx.rotate(ang * (Math.PI / 180));
-				ctx.drawImage(canvas, -(w/2) / settings.scaleFactor, -(h/2) / settings.scaleFactor);
+				translate(ctx, x, y);
+				rotate(ctx, ang);
+				drawImage(ctx);
 				ctx.restore();
 				return {
 					x : Math.ceil(x / settings.scaleFactor) - 2, 
@@ -87,7 +99,7 @@
 			this.drawOccupied = function() {
 				ctx.strokeStyle = "#f00";
 				ctx.beginPath();
-				for(i in occupiedSquares) {
+				for(var i in occupiedSquares) {
 					ctx.rect(
 						occupiedSquares[i].x * 10 / settings.scaleFactor, 
 						occupiedSquares[i].y * 10 / settings.scaleFactor, 
@@ -101,7 +113,7 @@
 				ctx.beginPath();
 				ctx.strokeStyle = "black";
 				ctx.lineWidth = 0.2;
-				for(x = 10; x <= 320; x += 10) {
+				for(var x = 10; x <= 320; x += 10) {
 					ctx.moveTo(0, x / settings.scaleFactor);
 					ctx.lineTo(320 / settings.scaleFactor, x / settings.scaleFactor);
 					ctx.moveTo(x / settings.scaleFactor, 0);
@@ -112,16 +124,28 @@
 			};
 
 			this.occupy = function(spaces) {
-				for(x = spaces.x; x < spaces.x + spaces.w; x++) {
-					for(y = spaces.y; y < spaces.y + spaces.h; y++) {
+				for(var x = spaces.x; x < spaces.x + spaces.w; x++) {
+					for(var y = spaces.y; y < spaces.y + spaces.h; y++) {
 						occupiedSquares.push({x:x, y:y});
+					}
+				}
+			};
+
+			this.deOccupy = function(spaces) {
+				for(var x = spaces.x; x < spaces.x + spaces.w; x++) {
+					for(var y = spaces.y; y < spaces.y + spaces.h; y++) {
+						for(var i in occupiedSquares) {
+							if(occupiedSquares[i].x == x && occupiedSquares[i].y == y) {
+								occupiedSquares.splice(i, 1);
+							}
+						}	
 					}
 				}
 			};
 
 			this.getPath = function(from, to) {
 				function inList(pos, list) {
-					for(i in list) {
+					for(var i in list) {
 						if(list[i].x == pos.x && list[i].y == pos.y) {
 							return true;
 						}
@@ -153,7 +177,6 @@
 					if(tr.x < width && tr.y > -1 && available(tr, list)) { list.push(tr); }
 					if(bl.x > -1 && bl.y < height && available(bl, list)) { list.push(bl); }
 					if(br.x < width && br.y < height && available(br, list)) { list.push(br); }
-
 				}
 
 				function getScores(list) {
@@ -166,6 +189,8 @@
 					}
 				}
 
+				var startTime = new Date().getTime();
+
 				if(inList(to, occupiedSquares)) { return []; }
 				var openList = [from];
 				var closedList = [];
@@ -177,6 +202,7 @@
 					getScores(openList);
 					openList.sort(function(a,b) { return a.score - b.score});
 				}
+//				console.log("A* timed at: " + (new Date().getTime() - startTime) + "ms");
 				if(openList.length == 0) { return []; }
 				var finalList = [];
 				current = closedList.pop();
@@ -195,15 +221,19 @@
 			var y = opts.y || 0;
 			var path = [];
 			var clearRect = null;
+			var updated = true;
 
 
 			this.clear = function() {
-				if(clearRect) {
+				if(updated && clearRect) {
 					ctx.clearRect(clearRect.x, clearRect.y, clearRect.w, clearRect.h);
 				}
 			}
 			this.draw = function() {
-				clearRect = sprite.draw(ctx, x - (sprite.getW()/2), y - (sprite.getH()/2), ang);
+				if(updated) {
+					clearRect = sprite.draw(ctx, x - (sprite.getW()/2), y - (sprite.getH()/2), ang);
+					updated = false;
+				}
 			}
 
 			this.getX = function() { return x; };
@@ -224,6 +254,7 @@
 			};
 
 			this.moveTo = function(targetX, targetY, spd) {
+				updated = true;
 				var speed = spd || 1.0
 				var deltaX = targetX - x;
 				var deltaY = targetY - y;
@@ -244,12 +275,50 @@
 			};
 
 			this.pointTo = function(otherObject) {
+				updated = true;
 				var deltaX = otherObject.getX() - x;
 				var deltaY = otherObject.getY() - y;
 				ang = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
 				return false;
 			};			
 		}
+
+		var PelletTower = function(opts) {
+			var level = 1;
+			var range = 20;
+			var ctx = opts.context;
+			var grid = opts.grid;
+			var gridX = opts.x;
+			var gridY = opts.y;
+			var gameObject = new GameObject(sprites.pelletTower, ctx, {x: (gridX + 1) * 10, y: (gridY + 1) * 10});
+
+			this.getGameObject = function() { return gameObject; }
+
+			this.place = function() {				
+				grid.occupy({x: gridX, y: gridY, w: 2, h: 2});
+/*				if(grid.getPath({x: 0, y: 15}, {x: 31, y: 15}).length == 0 ||
+					grid.getPath({x: 15, y: 0}, {x: 15, y: 31}).length == 0) {
+					grid.deOccupy({x: gridX, y: gridY, w: 2, h: 2});
+					return false;
+				}*/
+
+				return true;
+			};
+
+			this.shootAtAnyWithinRange = function(others) {
+				for(var i in others) {
+					var deltaX = others[i].getX() - gameObject.getX();
+					var deltaY = others[i].getY() - gameObject.getY();
+					var distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
+					if(distance <= range) { 
+						gameObject.pointTo(others[i]); 
+						// TODO: shooting
+						return false;
+					}
+				}
+				return false;
+			};
+		};
 
 		function doResize() {
 			var c = $('#canvas')[0];
@@ -281,18 +350,29 @@
 			var grid = new Grid(ctx);
 			var path = [];
 			var creep = new GameObject(sprites.creep, ctx, {x: 300, y: 200});
-			var creep2 = new GameObject(sprites.creep, ctx, {x: 0, y: 0});
-			var pelletTower = new GameObject(sprites.pelletTower, ctx, {x: 150, y: 150});
-			grid.occupy({x: 14, y: 14, w: 2, h: 2});
+			var creep2 = new GameObject(sprites.creep, ctx, {x: 0, y: 0});		
+
+			var gameObjects = [creep, creep2];
+			var towers = [];
+			for(var x = 1; x < 30; x+= 2) {
+				for(var y = 1; y < 30; y += 4) {
+					var pelletTower = new PelletTower({context: ctx, grid: grid, x: x, y: y});
+					if(pelletTower.place()) {
+						gameObjects.push(pelletTower.getGameObject());
+						towers.push(pelletTower);
+					} else {
+						console.log("BLOCKING");
+					}
+				}
+			}
 
 			var target = {x : 0, y : 0};
 
-			var gameObjects = [creep, creep2, pelletTower];
 			function drawCanvas() {
-				grid.clearGhost();
-				for(x in gameObjects) { gameObjects[x].clear(); }
-				grid.drawGhost();
-				for(x in gameObjects) { gameObjects[x].draw(); }
+//				grid.clearGhost();
+				for(var x in gameObjects) { gameObjects[x].clear(); }
+//				grid.drawGhost();
+				for(var x in gameObjects) { gameObjects[x].draw(); }
 			}
 
 
@@ -304,9 +384,14 @@
 				creep.getPathTo(grid, target);
 				creep2.getPathTo(grid, target);
 				actionQueue = [
-					function() { return pelletTower.pointTo(creep2); },
 					function() { return creep.followPath(1.8); },
-					function() { return creep2.followPath(); }
+					function() { return creep2.followPath(); },
+					function() { 
+						for(var i in towers) { 
+							towers[i].shootAtAnyWithinRange([creep, creep2]); 
+						}
+						return false;
+					}
 				];
 			});
 
@@ -324,22 +409,20 @@
 
 			function processActionQueue() {
 
-				for(x in actionQueue) {
+				for(var x in actionQueue) {
 					if(actionQueue[x]()) { actionQueue.splice(x, 1); }
 				}
 			}
 
-			
 			function processTick() {
-				requestAnimFrame(processTick);
-//				var startTime = new Date().getTime();
-//				var maxInterval = 25;
+//				requestAnimFrame(processTick);
+				var startTime = new Date().getTime();
+				var maxInterval = 25;
 				processActionQueue();
 				drawCanvas();
 
-//				var elapsedTime = new Date().getTime() - startTime;
-//				console.log(maxInterval - (elapsedTime > maxInterval ? maxInterval : elapsedTime));
-//				setTimeout(processTick, maxInterval - (elapsedTime > maxInterval ? 0 : elapsedTime));
+				var elapsedTime = new Date().getTime() - startTime;
+				setTimeout(processTick, maxInterval - (elapsedTime > maxInterval ? 0 : elapsedTime));
 			}
 			processTick();
 		});
@@ -347,7 +430,6 @@
 	</script>
 </head>
 <body >
-<canvas id="bg" style="position absolute; z-index: 0; left: 0; top: 0"></canvas>
 <canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 0">
 </canvas>
 
