@@ -15,10 +15,10 @@
 			var canvas = null;
 			this.init = function() {
 				canvas = document.createElement('canvas');
-				var ctx = canvas.getContext('2d');
-				ctx.width = w;
-				ctx.height = h;
-				ctx.drawSvg(svg, 0, 0, w / settings.scaleFactor, h / settings.scaleFactor);
+				var ctx = canvas.getContext('2d');				
+				canvas.width = Math.floor(w / settings.scaleFactor);
+				canvas.height = Math.floor(h / settings.scaleFactor);
+				ctx.drawSvg(svg, 0, 0, Math.floor(w / settings.scaleFactor), Math.floor(h / settings.scaleFactor));
 			}
 
 			function rotate(ctx, ang) {
@@ -289,7 +289,7 @@
 
 		var PelletTower = function(opts) {
 			var level = 1;
-			var range = 20;
+			var range = 120;
 			var ctx = opts.context;
 			var grid = opts.grid;
 			var gridX = opts.x;
@@ -324,21 +324,6 @@
 			};
 		};
 
-		function doResize() {
-			var c = $('#canvas')[0];
-			var ww = (window.innerWidth || document.body.clientWidth) - 50;
-			var wh = (window.innerHeight || document.body.clientHeight) - 50;
-			c.width =  (ww > wh ? wh : ww);
-			c.height = c.width;
-			$('#bg')[0].width = c.width;
-			$('#bg')[0].height = c.height;
-			settings.scaleFactor = 320 / c.width;
-			sprites.creep.init();
-			sprites.pelletTower.init();
-		}
-
-		$(window).resize(doResize);
-
 		window.requestAnimFrame = (function(){
 		  return  window.requestAnimationFrame       ||
 			  window.webkitRequestAnimationFrame ||
@@ -361,6 +346,22 @@
 			var creeps = [creep, creep2];
 			var towers = [];
 			var gameObjects = [];
+
+			function doResize() {
+				var c = $('#canvas')[0];
+				var ww = (window.innerWidth || document.body.clientWidth) - 50;
+				var wh = (window.innerHeight || document.body.clientHeight) - 50;
+				c.width =  (ww > wh ? wh : ww);
+				c.height = c.width;
+				$('#bg')[0].width = c.width;
+				$('#bg')[0].height = c.height;
+				settings.scaleFactor = 320 / c.width;
+				sprites.creep.init();
+				sprites.pelletTower.init();
+				for(i in gameObjects) { gameObjects[i].setUpdated(true); }
+			}
+			$(window).resize(doResize);
+
 			for(var x = 1; x < 30; x+= 2) {
 				for(var y = 1; y < 30; y += 4) {
 					var pelletTower = new PelletTower({context: ctx, grid: grid, x: x, y: y});
@@ -432,7 +433,7 @@
 
 				var i = 0;
 				var drawList = [];
-				while(redrawList.length > 0 && ++i < 20) {
+				while(redrawList.length > 0 && ++i < 100) {
 					var gameObject = redrawList.pop();
 					gameObject.clear();
 					drawList.push(gameObject);
