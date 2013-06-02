@@ -289,7 +289,7 @@
 
 		var PelletTower = function(opts) {
 			var level = 1;
-			var range = 120;
+			var range = 40;
 			var ctx = opts.context;
 			var grid = opts.grid;
 			var gridX = opts.x;
@@ -309,12 +309,24 @@
 				return true;
 			};
 
+			var currentTarget = null;
 			this.shootAtAnyWithinRange = function(others) {
+				if(currentTarget) {
+					var deltaX = currentTarget.getX() - gameObject.getX();
+					var deltaY = currentTarget.getY() - gameObject.getY();
+					var distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
+					if(distance <= range) { 
+						gameObject.pointTo(currentTarget);  
+						return false; 
+					}
+				}
+
 				for(var i in others) {
 					var deltaX = others[i].getX() - gameObject.getX();
 					var deltaY = others[i].getY() - gameObject.getY();
 					var distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
 					if(distance <= range) { 
+						currentTarget = others[i];
 						gameObject.pointTo(others[i]); 
 						// TODO: shooting
 						return false;
@@ -340,10 +352,8 @@
 
 			var grid = new Grid($('#bg')[0].getContext('2d'));
 			var path = [];
-			var creep = new GameObject(sprites.creep, ctx, {x: 300, y: 200, zIndex: 1});
-			var creep2 = new GameObject(sprites.creep, ctx, {x: 0, y: 0, zIndex: 1});		
 
-			var creeps = [creep, creep2];
+			var creeps = [];
 			var towers = [];
 			var gameObjects = [];
 
@@ -373,8 +383,11 @@
 					}
 				}
 			}
-			gameObjects.push(creep);
-			gameObjects.push(creep2);
+			for(var i = 0; i < 20; ++i) {
+				var creep = new GameObject(sprites.creep, ctx, {x: i*20, y: 10, zIndex: 1});
+				creeps.push(creep);
+				gameObjects.push(creep);
+			}
 
 			var target = {x : 0, y : 0};
 
@@ -383,18 +396,23 @@
 			$("#canvas").on("click", function(e) {
 
 				target = {x: grid.getGhost().x, y : grid.getGhost().y};
-				creep.getPathTo(grid, target);
-				creep2.getPathTo(grid, target);
 				actionQueue = [
-					function() { return creep.followPath(1.1); },
-					function() { return creep2.followPath(); },
 					function() { 
 						for(var i in towers) { 
-							towers[i].shootAtAnyWithinRange([creep, creep2]); 
+							towers[i].shootAtAnyWithinRange(creeps); 
 						}
 						return false;
 					}
 				];				
+
+				for(var i in creeps) {
+					var creep = creeps[i];
+					creep.getPathTo(grid, target);
+					var func = (function(creep, speed) {
+						return function() { return creep.followPath(speed); }
+					})(creeps[i], 1 + (i*0.05));
+					actionQueue.push(func);
+				}
 			});
 
 			$("#canvas").on("mouseout", function(e) {
@@ -433,7 +451,7 @@
 
 				var i = 0;
 				var drawList = [];
-				while(redrawList.length > 0 && ++i < 100) {
+				while(redrawList.length > 0 && ++i < 500) {
 					var gameObject = redrawList.pop();
 					gameObject.clear();
 					drawList.push(gameObject);
