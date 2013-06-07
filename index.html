@@ -360,21 +360,19 @@
 				creeps.push(creep);
 				gameObjects.push(creep);
 			}
+			actionQueue = [
+				function() { 
+					for(var i in towers) { 
+						towers[i].shootAtAnyWithinRange(creeps); 
+					}
+					return false;
+				}
+			];				
 
 			var target = {x : 0, y : 0};
-
-
 			$("#canvas").on("click", function(e) {
 
 				target = {x: grid.getGhost().x, y : grid.getGhost().y};
-				actionQueue = [
-					function() { 
-						for(var i in towers) { 
-							towers[i].shootAtAnyWithinRange(creeps); 
-						}
-						return false;
-					}
-				];				
 
 				for(var i in creeps) {
 					var creep = creeps[i];
@@ -396,8 +394,15 @@
 
 			function processActionQueue() {
 
-				for(var x in actionQueue) {
+/*				for(var x in actionQueue) {
 					if(actionQueue[x]()) { actionQueue.splice(x, 1); }
+				}*/
+
+				for(var i in towers) {
+					towers[i].shootAtAnyWithinRange(creeps); 
+				}
+				for(var i in creeps) {
+					creeps[i].followPath(1 + (i*0.05));
 				}
 			}
 
@@ -444,9 +449,10 @@
 	</script>
 </head>
 <body >
-<canvas id="bg" style="border: 1px solid; margin: 0; position: absolute; z-index: 0; left: 0; top: 0">
+<a href="http://github.com/renevanderark/canvas-td">back to github</a>
+<canvas id="bg" style="border: 1px solid; margin: 0; position: absolute; z-index: 0; left: 0; top: 30">
 </canvas>
-<canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 0">
+<canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 30">
 </canvas>
 
 </body>
