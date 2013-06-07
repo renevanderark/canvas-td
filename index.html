@@ -6,6 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=0.5, user-scalable=no"/>
 
 	<script type="text/javascript">
+		var actionQueue = [];
 		var settings = {
 			scaleFactor: 1.0
 		};
@@ -63,6 +64,10 @@
 			var ghost = {x : -1, y : -1, w : 2, h : 2};
 			var occupiedSquares = [];
 			var clearGhostRect = null;
+			var astarWorker = new Worker('astarWorker.js');
+
+
+
 
 			this.setGhost = function(dims) {
 				ghost.x = dims.x;
@@ -143,79 +148,38 @@
 				}
 			};
 
-			this.getPath = function(from, to) {
-				function inList(pos, list) {
-					for(var i in list) {
-						if(list[i].x == pos.x && list[i].y == pos.y) {
-							return true;
-						}
-					}
-					return false;
-				}
-				
-				function available(pos, list) {
-					return !inList(pos, openList) && !inList(pos, closedList) && !inList(pos, occupiedSquares);
-				}
+			var pathSubjects = [];
+			astarWorker.addEventListener('message', function(msg) {
+			
+				pathSubjects[msg.data.subjectKey].setPath(msg.data.path);
+			}, false);
 
-				function getAdjacent(pos, list) {
-					var left = { x : pos.x - 1, y : pos.y, parent : pos, gScore : 10 };
-					var right = { x : pos.x + 1, y : pos.y, parent : pos, gScore : 10 };
-					var up = { x : pos.x, y : pos.y - 1, parent : pos, gScore : 10 };
-					var down = { x : pos.x, y : pos.y + 1, parent : pos, gScore : 10 };
-
-					if(left.x > -1 && available(left, list)) { list.push(left); }
-					if(right.x < width && available(right, list)) { list.push(right); }
-					if(up.y > -1 && available(up, list)) { list.push(up); }
-					if(down.y < height && available(down, list)) { list.push(down); }
-
-					var tl = { x : pos.x - 1, y : pos.y - 1, parent : pos, gScore : 14 };
-					var tr = { x : pos.x + 1, y : pos.y - 1, parent : pos, gScore : 14 };
-					var bl = { x : pos.x - 1, y : pos.y + 1, parent : pos, gScore : 14 };
-					var br = { x : pos.x + 1, y : pos.y + 1, parent : pos, gScore : 14 };
-
-					if(tl.x > -1 && tl.y > -1 && available(tl, list)) { list.push(tl); }
-					if(tr.x < width && tr.y > -1 && available(tr, list)) { list.push(tr); }
-					if(bl.x > -1 && bl.y < height && available(bl, list)) { list.push(bl); }
-					if(br.x < width && br.y < height && available(br, list)) { list.push(br); }
-				}
-
-				function getScores(list) {
-					for(i in list) {
-						var deltaX = to.x - list[i].x;
-						var deltaY = to.y - list[i].y;
-						if(deltaX < 0) { deltaX = -deltaX; }
-						if(deltaY < 0) { deltaY = -deltaY; }
-						list[i].score = list[i].gScore + (deltaX * 10) + (deltaY * 10);
-					}
-				}
-
-				var startTime = new Date().getTime();
-
-				if(inList(to, occupiedSquares)) { return []; }
-				var openList = [from];
-				var closedList = [];
-				var current = {x: -1, y: -1};
-				while(openList.length > 0 && !(current.x == to.x && current.y == to.y)) {				
-					current = openList.shift();
-					closedList.push(current);
-					getAdjacent(current, openList);
-					getScores(openList);
-					openList.sort(function(a,b) { return a.score - b.score});
-				}
-//				console.log("A* timed at: " + (new Date().getTime() - startTime) + "ms");
-				if(openList.length == 0) { return []; }
-				var finalList = [];
-				current = closedList.pop();
-				while(current.parent) {
-					finalList.push(current);
-					current = current.parent;
-				}
-				return finalList.reverse();
+			this.getPath = function(from, to, subject) {
+				pathSubjects[subject.getHashKey()] = subject;
+				astarWorker.postMessage({
+					from: from, 
+					to: to, 
+					occupiedSquares: occupiedSquares,
+					width: width,
+					height: height,
+					subjectKey: subject.getHashKey()
+				});
 			};
 		};
 
+		function makeid() {
+		    var text = "";
+		    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+		    for(var i = 0; i < 5; i++) {
+        		text += possible.charAt(Math.floor(Math.random() * possible.length));
+			}
+		    return text;
+		}
+
 		var GameObject = function(sprite, ctx, options) {
 			var opts = options || {};
+			var speed = opts.speed || 1;
 			var ang = opts.angle || 0;
 			var x = opts.x || 0;
 			var y = opts.y || 0;
@@ -224,9 +188,11 @@
 			var clearRect = null;
 			var bgBuf = document.createElement("canvas");
 			var updated = true;
+			var hashKey = makeid();
 
 			this.isUpdated = function() { return updated; }
 			this.setUpdated = function(up) { updated = up; }
+			this.getHashKey = function() { return hashKey; }
 
 			this.clear = function() {
 				if(clearRect) {
@@ -243,8 +209,14 @@
 			this.getY = function() { return y; };
 			this.getZ = function() { return z; };
 
-			this.getPathTo = function(grid, target) {
-				path = grid.getPath({x : Math.floor(x / 10), y : Math.floor(y / 10) }, target);
+			this.getPathTo = function(grid, target)  {
+				grid.getPath({x : Math.floor(x / 10), y : Math.floor(y / 10) }, target, this);
+			};
+
+			this.setPath = function(setPath) {
+				path = setPath;
+				var _self = this;
+				actionQueue.push(function() { return _self.followPath(speed); });
 			};
 
 			/** Action queue targets; returning true means target is achieved and action can be removed from the queue **/
@@ -384,7 +356,7 @@
 				}
 			}
 			for(var i = 0; i < 20; ++i) {
-				var creep = new GameObject(sprites.creep, ctx, {x: i*20, y: 10, zIndex: 1});
+				var creep = new GameObject(sprites.creep, ctx, {x: i*20, y: 10, zIndex: 1, speed: 1 + (1-i / 20)});
 				creeps.push(creep);
 				gameObjects.push(creep);
 			}
@@ -392,7 +364,6 @@
 			var target = {x : 0, y : 0};
 
 
-			var actionQueue = [];
 			$("#canvas").on("click", function(e) {
 
 				target = {x: grid.getGhost().x, y : grid.getGhost().y};
@@ -408,10 +379,6 @@
 				for(var i in creeps) {
 					var creep = creeps[i];
 					creep.getPathTo(grid, target);
-					var func = (function(creep, speed) {
-						return function() { return creep.followPath(speed); }
-					})(creeps[i], 1 + (i*0.05));
-					actionQueue.push(func);
 				}
 			});
 
