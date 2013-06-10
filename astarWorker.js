@@ -13,8 +13,12 @@ self.addEventListener('message', function(msg) {
       return false;
   }
   
+  function inList1(pos, list) {
+      return list[pos.x + "-" + pos.y];
+  }
+  
   function available(pos, list) {
-      return !inList(pos, openList) && !inList(pos, closedList) && !inList(pos, occupiedSquares);
+      return !inList(pos, openList) && !inList(pos, closedList) && !inList1(pos, occupiedSquares);
   }
 
   function getAdjacent(pos, list) {
@@ -50,7 +54,7 @@ self.addEventListener('message', function(msg) {
   }
   var startTime = new Date().getTime();
 
-  if(inList(to, occupiedSquares)) { return []; }
+  if(inList1(to, occupiedSquares)) { return []; }
   var openList = [from];
   var closedList = [];
   var current = {x: -1, y: -1};
