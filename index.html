@@ -62,7 +62,7 @@
 			var width = opts.width || 32;
 			var height = opts.height || 32;
 			var ghost = {x : -1, y : -1, w : 2, h : 2};
-			var occupiedSquares = [];
+			var occupiedSquares = [[]];
 			var clearGhostRect = null;
 			var astarWorker = new Worker('astarWorker.js');
 
