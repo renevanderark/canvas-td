@@ -146,7 +146,7 @@
 
 			var pathSubjects = [];
 			astarWorker.addEventListener('message', function(msg) {
-			
+				console.log(msg.data.timed + "ms");
 				pathSubjects[msg.data.subjectKey].setPath(msg.data.path);
 			}, false);
 
@@ -431,7 +431,7 @@
 
 			function processTick() {
 				var startTime = new Date().getTime();
-				var maxInterval = 15;
+				var maxInterval = 25;
 				processActionQueue();
 				pushUpdatesToCanvas();
 
