@@ -1,0 +1,456 @@
+<html>
+<head>
+	<script type="text/javascript" src="rgbcolor.js"></script> 
+	<script type="text/javascript" src="canvg.js"></script> 
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" ></script>
+	<meta name="viewport" content="width=device-width, initial-scale=0.5, user-scalable=no"/>
+
+	<script type="text/javascript">
+		var actionQueue = [];
+		var settings = {
+			scaleFactor: 1.0
+		};
+
+
+		var Sprite = function(svg, w, h, scaleFactor) {
+			var canvas = null;
+			this.init = function() {
+				canvas = document.createElement('canvas');
+				var ctx = canvas.getContext('2d');				
+				canvas.width = Math.floor(w / settings.scaleFactor);
+				canvas.height = Math.floor(h / settings.scaleFactor);
+				ctx.drawSvg(svg, 0, 0, Math.floor(w / settings.scaleFactor), Math.floor(h / settings.scaleFactor));
+			}
+
+			function rotate(ctx, ang) {
+				ctx.rotate(ang * (Math.PI / 180));
+			}
+
+			function translate(ctx, x, y) {
+				ctx.translate((x+(w/2)) / settings.scaleFactor, (y+(h/2)) / settings.scaleFactor);
+			}
+
+			function drawImage(ctx) {
+				ctx.drawImage(canvas, Math.floor(-(w/2) / settings.scaleFactor), Math.floor(-(h/2) / settings.scaleFactor));
+			}
+
+			this.draw = function(ctx, x, y, ang) {
+				ctx.save();
+				translate(ctx, x, y);
+				rotate(ctx, ang);
+				drawImage(ctx);
+				ctx.restore();
+				return {
+					x : Math.ceil(x / settings.scaleFactor)-1, 
+					y : Math.ceil(y / settings.scaleFactor)-1,
+					w : Math.ceil(w / settings.scaleFactor)+2,
+					h : Math.ceil(h / settings.scaleFactor)+2,
+				};
+			}
+			this.getW = function() { return w; }
+			this.getH = function() { return h; }
+			this.init();
+		}
+
+		var sprites = {
+			creep: new Sprite("creep.svg", 8, 8),
+			pelletTower:  new Sprite("pellet.svg", 20, 20)
+		};
+
+		var Grid = function(ctx, options) {
+			var opts = options || {};
+			var width = opts.width || 32;
+			var height = opts.height || 32;
+			var ghost = {x : -1, y : -1, w : 2, h : 2};
+			var occupiedSquares = [];
+			var clearGhostRect = null;
+			var astarWorker = new Worker('astarWorker.js');
+
+
+
+
+			this.setGhost = function(dims) {
+				ghost.x = dims.x;
+				ghost.y = dims.y;
+				ghost.w = dims.w || ghost.w;
+				ghost.h = dims.h || ghost.h;
+			};
+
+			this.getGhost = function() { return ghost; };
+
+			this.clearGhost = function() {
+				if(clearGhostRect) {
+					ctx.clearRect(clearGhostRect.x, clearGhostRect.y, clearGhostRect.w, clearGhostRect.h);
+				}
+			};
+
+			this.drawGhost = function() { 
+				if(ghost.x > -1 && ghost.y > -1) {
+					ctx.fillStyle = "#ddd";	
+					ctx.fillRect(ghost.x * 10 / settings.scaleFactor, 
+						ghost.y * 10 / settings.scaleFactor, 
+						ghost.w * 10 / settings.scaleFactor,
+						ghost.h * 10 / settings.scaleFactor);
+
+					clearGhostRect = { 
+						x: Math.ceil(ghost.x * 10 / settings.scaleFactor) - 1, 
+						y: Math.ceil(ghost.y * 10 / settings.scaleFactor) - 1, 
+						w: Math.ceil(ghost.w * 10 / settings.scaleFactor) + 2,
+						h: Math.ceil(ghost.h * 10 / settings.scaleFactor) + 2
+					};
+				}
+			};
+
+			this.drawOccupied = function() {
+/*				ctx.strokeStyle = "#f00";
+				ctx.beginPath();
+				for(var i in occupiedSquares) {
+					ctx.rect(
+						occupiedSquares[i].x * 10 / settings.scaleFactor, 
+						occupiedSquares[i].y * 10 / settings.scaleFactor, 
+						10 / settings.scaleFactor,
+						10 / settings.scaleFactor);
+				}
+				ctx.stroke();*/
+			};
+
+			this.draw = function() {
+				ctx.beginPath();
+				ctx.strokeStyle = "black";
+				ctx.lineWidth = 0.2;
+				for(var x = 10; x <= 320; x += 10) {
+					ctx.moveTo(0, x / settings.scaleFactor);
+					ctx.lineTo(320 / settings.scaleFactor, x / settings.scaleFactor);
+					ctx.moveTo(x / settings.scaleFactor, 0);
+					ctx.lineTo(x / settings.scaleFactor, 320 / settings.scaleFactor);
+				}
+				ctx.stroke();	
+				ctx.lineWidth = 1;
+			};
+
+			this.occupy = function(spaces) {
+				for(var x = spaces.x; x < spaces.x + spaces.w; x++) {
+					for(var y = spaces.y; y < spaces.y + spaces.h; y++) {
+						occupiedSquares[x + "-" + y] = true;
+					}
+				}
+			};
+
+			this.deOccupy = function(spaces) {
+				for(var x = spaces.x; x < spaces.x + spaces.w; x++) {
+					for(var y = spaces.y; y < spaces.y + spaces.h; y++) {
+						occupiedSquares[x + "-" + y] = false;	
+					}
+				}
+			};
+
+			var pathSubjects = [];
+			astarWorker.addEventListener('message', function(msg) {
+				console.log(msg.data.timed + "ms");
+				pathSubjects[msg.data.subjectKey].setPath(msg.data.path);
+			}, false);
+
+			this.getPath = function(from, to, subject) {
+				pathSubjects[subject.getHashKey()] = subject;
+				astarWorker.postMessage({
+					from: from, 
+					to: to, 
+					occupiedSquares: occupiedSquares,
+					width: width,
+					height: height,
+					subjectKey: subject.getHashKey()
+				});
+			};
+		};
+
+		function makeid() {
+		    var text = "";
+		    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+		    for(var i = 0; i < 5; i++) {
+        		text += possible.charAt(Math.floor(Math.random() * possible.length));
+			}
+		    return text;
+		}
+
+		var GameObject = function(sprite, ctx, options) {
+			var opts = options || {};
+			var speed = opts.speed || 1;
+			var ang = opts.angle || 0;
+			var x = opts.x || 0;
+			var y = opts.y || 0;
+			var z = opts.zIndex || 0;
+			var path = [];
+			var clearRect = null;
+			var bgBuf = document.createElement("canvas");
+			var updated = true;
+			var hashKey = makeid();
+
+			this.isUpdated = function() { return updated; }
+			this.setUpdated = function(up) { updated = up; }
+			this.getHashKey = function() { return hashKey; }
+
+			this.clear = function() {
+				if(clearRect) {
+					ctx.clearRect(clearRect.x, clearRect.y, clearRect.w, clearRect.h);
+				}
+			}
+
+			this.draw = function() {
+				clearRect = sprite.draw(ctx, x - (sprite.getW()/2), y - (sprite.getH()/2), ang);
+				updated = false;
+			}
+
+			this.getX = function() { return x; };
+			this.getY = function() { return y; };
+			this.getZ = function() { return z; };
+
+			this.getPathTo = function(grid, target)  {
+				grid.getPath({x : Math.floor(x / 10), y : Math.floor(y / 10) }, target, this);
+			};
+
+			this.setPath = function(setPath) {
+				path = setPath;
+				var _self = this;
+				actionQueue.push(function() { return _self.followPath(speed); });
+			};
+
+			/** Action queue targets; returning true means target is achieved and action can be removed from the queue **/
+			this.followPath = function(spd) {
+				if(path.length == 0) { return true; }
+				var t = path[0];
+				if(this.moveTo(t.x * 10 + 5, t.y * 10 + 5, spd)) {
+					path.shift();
+				}
+				return false;
+			};
+
+			this.moveTo = function(targetX, targetY, spd) {
+				updated = true;
+				var speed = spd || 1.0
+				var deltaX = targetX - x;
+				var deltaY = targetY - y;
+				var mag = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
+				ang = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
+				var nextX = x + ((deltaX / mag) * speed);
+				var nextY = y + ((deltaY / mag) * speed);
+				if(nextX - targetX > -1 && nextX - targetX < 1 && nextY - targetY > -1 && nextY - targetY < 1) {
+					x = targetX; y = targetY;
+					return true;
+				}
+				x = nextX; y = nextY;
+				return false;
+			};
+
+			this.moveToOther = function(otherObject, spd) {
+				return this.moveTo(otherObject.getX(), otherObject.getY(), spd);
+			};
+
+			this.pointTo = function(otherObject) {
+				updated = true;
+				var deltaX = otherObject.getX() - x;
+				var deltaY = otherObject.getY() - y;
+				ang = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
+				return false;
+			};			
+		}
+
+		var PelletTower = function(opts) {
+			var level = 1;
+			var range = 40;
+			var ctx = opts.context;
+			var grid = opts.grid;
+			var gridX = opts.x;
+			var gridY = opts.y;
+			var gameObject = new GameObject(sprites.pelletTower, ctx, {x: (gridX + 1) * 10, y: (gridY + 1) * 10, zIndex: 0});
+
+			this.getGameObject = function() { return gameObject; }
+
+			this.place = function() {				
+				grid.occupy({x: gridX, y: gridY, w: 2, h: 2});
+/*				if(grid.getPath({x: 0, y: 15}, {x: 31, y: 15}).length == 0 ||
+					grid.getPath({x: 15, y: 0}, {x: 15, y: 31}).length == 0) {
+					grid.deOccupy({x: gridX, y: gridY, w: 2, h: 2});
+					return false;
+				}*/
+
+				return true;
+			};
+
+			var currentTarget = null;
+			this.shootAtAnyWithinRange = function(others) {
+				if(currentTarget) {
+					var deltaX = currentTarget.getX() - gameObject.getX();
+					var deltaY = currentTarget.getY() - gameObject.getY();
+					var distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
+					if(distance <= range) { 
+						gameObject.pointTo(currentTarget);  
+						return false; 
+					}
+				}
+
+				for(var i in others) {
+					var deltaX = others[i].getX() - gameObject.getX();
+					var deltaY = others[i].getY() - gameObject.getY();
+					var distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
+					if(distance <= range) { 
+						currentTarget = others[i];
+						gameObject.pointTo(others[i]); 
+						// TODO: shooting
+						return false;
+					}
+				}
+				return false;
+			};
+		};
+
+		window.requestAnimFrame = (function(){
+		  return  window.requestAnimationFrame       ||
+			  window.webkitRequestAnimationFrame ||
+			  window.mozRequestAnimationFrame    ||
+			  function( callback ){
+			    window.setTimeout(callback, 1000 / 60);
+			  };
+		})();
+
+		$(document).ready(function() {
+			var c = $('#canvas')[0];
+			doResize();
+			var ctx = c.getContext('2d');
+
+			var grid = new Grid($('#bg')[0].getContext('2d'));
+			var path = [];
+
+			var creeps = [];
+			var towers = [];
+			var gameObjects = [];
+
+			function doResize() {
+				var c = $('#canvas')[0];
+				var ww = (window.innerWidth || document.body.clientWidth) - 50;
+				var wh = (window.innerHeight || document.body.clientHeight) - 50;
+				c.width =  (ww > wh ? wh : ww);
+				c.height = c.width;
+				$('#bg')[0].width = c.width;
+				$('#bg')[0].height = c.height;
+				settings.scaleFactor = 320 / c.width;
+				sprites.creep.init();
+				sprites.pelletTower.init();
+				for(i in gameObjects) { gameObjects[i].setUpdated(true); }
+			}
+			$(window).resize(doResize);
+
+			for(var x = 1; x < 30; x+= 2) {
+				for(var y = 1; y < 30; y += 4) {
+					var pelletTower = new PelletTower({context: ctx, grid: grid, x: x, y: y});
+					if(pelletTower.place()) {
+						towers.push(pelletTower);
+						gameObjects.push(pelletTower.getGameObject());
+					} else {
+						console.log("BLOCKING");
+					}
+				}
+			}
+			for(var i = 0; i < 20; ++i) {
+				var creep = new GameObject(sprites.creep, ctx, {x: i*20, y: 10, zIndex: 1, speed: 1 + (1-i / 20)});
+				creeps.push(creep);
+				gameObjects.push(creep);
+			}
+			actionQueue = [
+				function() { 
+					for(var i in towers) { 
+						towers[i].shootAtAnyWithinRange(creeps); 
+					}
+					return false;
+				}
+			];				
+
+			var target = {x : 0, y : 0};
+			$("#canvas").on("click", function(e) {
+
+				target = {x: grid.getGhost().x, y : grid.getGhost().y};
+
+				for(var i in creeps) {
+					var creep = creeps[i];
+					creep.getPathTo(grid, target);
+				}
+			});
+
+			$("#canvas").on("mouseout", function(e) {
+				grid.setGhost({ x : -1, y : -1 });
+			});
+
+			$("#canvas").on("mousemove", function(e) {
+				var parentOffset = $(this).offset(); 
+				grid.setGhost({
+					x : Math.floor(((e.pageX - parentOffset.left) * settings.scaleFactor) / 10),
+					y : Math.floor(((e.pageY - parentOffset.top) * settings.scaleFactor) / 10)
+				});
+			});
+
+			function processActionQueue() {
+
+/*				for(var x in actionQueue) {
+					if(actionQueue[x]()) { actionQueue.splice(x, 1); }
+				}*/
+
+				for(var i in towers) {
+					towers[i].shootAtAnyWithinRange(creeps); 
+				}
+				for(var i in creeps) {
+					creeps[i].followPath(1 + (i*0.05));
+				}
+			}
+
+
+			var redrawList = [];
+			function pushUpdatesToCanvas() {
+				for(var i in gameObjects) {
+					if(gameObjects[i].isUpdated() && $.inArray(gameObjects[i], redrawList) == -1) {
+						redrawList.push(gameObjects[i]);
+					}
+				}
+				redrawList.sort(function(a,b) { return b.getZ() - a.getZ(); });
+			}
+
+			function drawCanvas() {
+				grid.clearGhost();
+				grid.drawGhost();
+
+				var i = 0;
+				var drawList = [];
+				while(redrawList.length > 0 && ++i < 500) {
+					var gameObject = redrawList.pop();
+					gameObject.clear();
+					drawList.push(gameObject);
+				}
+
+				for(var x in drawList) { drawList[x].draw(); }
+				requestAnimFrame(drawCanvas);
+			}
+
+			function processTick() {
+				var startTime = new Date().getTime();
+				var maxInterval = 25;
+				processActionQueue();
+				pushUpdatesToCanvas();
+
+				var elapsedTime = new Date().getTime() - startTime;
+				setTimeout(processTick, maxInterval - (elapsedTime > maxInterval ? 0 : elapsedTime));
+			}
+			processTick();
+			drawCanvas();
+		});
+
+	</script>
+</head>
+<body >
+<a href="http://github.com/renevanderark/canvas-td">back to github</a>
+<canvas id="bg" style="border: 1px solid; margin: 0; position: absolute; z-index: 0; left: 0; top: 30">
+</canvas>
+<canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 30">
+</canvas>
+
+</body>
+
+</html>
