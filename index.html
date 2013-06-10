@@ -150,7 +150,7 @@
 
 			var pathSubjects = [];
 			astarWorker.addEventListener('message', function(msg) {
-			
+				console.log("A* worker: " + msg.data.timed + "ms");			
 				pathSubjects[msg.data.subjectKey].setPath(msg.data.path);
 			}, false);
 
