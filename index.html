@@ -62,7 +62,7 @@
 			var width = opts.width || 32;
 			var height = opts.height || 32;
 			var ghost = {x : -1, y : -1, w : 2, h : 2};
-			var occupiedSquares = [[]];
+			var occupiedSquares = [];
 			var clearGhostRect = null;
 			var astarWorker = new Worker('astarWorker.js');
 
@@ -102,7 +102,7 @@
 			};
 
 			this.drawOccupied = function() {
-			/*	ctx.strokeStyle = "#f00";
+/*				ctx.strokeStyle = "#f00";
 				ctx.beginPath();
 				for(var i in occupiedSquares) {
 					ctx.rect(
@@ -131,8 +131,7 @@
 			this.occupy = function(spaces) {
 				for(var x = spaces.x; x < spaces.x + spaces.w; x++) {
 					for(var y = spaces.y; y < spaces.y + spaces.h; y++) {
-					//	occupiedSquares.push({x:x, y:y});
-						occupiedSquares[x][y] = true;
+						occupiedSquares[x + "-" + y] = true;
 					}
 				}
 			};
@@ -140,19 +139,14 @@
 			this.deOccupy = function(spaces) {
 				for(var x = spaces.x; x < spaces.x + spaces.w; x++) {
 					for(var y = spaces.y; y < spaces.y + spaces.h; y++) {
-					/*	for(var i in occupiedSquares) {
-							if(occupiedSquares[i].x == x && occupiedSquares[i].y == y) {
-								occupiedSquares.splice(i, 1);
-							}
-						}*/
-						occupiedSquares[x][y] = false;
+						occupiedSquares[x + "-" + y] = false;	
 					}
 				}
 			};
 
 			var pathSubjects = [];
 			astarWorker.addEventListener('message', function(msg) {
-				console.log("A* worker: " + msg.data.timed + "ms");			
+				console.log(msg.data.timed + "ms");
 				pathSubjects[msg.data.subjectKey].setPath(msg.data.path);
 			}, false);
 
@@ -167,12 +161,6 @@
 					subjectKey: subject.getHashKey()
 				});
 			};
-			for(var x = 0; x < width; x++) {
-				occupiedSquares[x] = [];
-				for(var y = 0; y < height; y++){
-					occupiedSquares[x][y] = false;
-				}
-			}
 		};
 
 		function makeid() {
@@ -368,21 +356,19 @@
 				creeps.push(creep);
 				gameObjects.push(creep);
 			}
+			actionQueue = [
+				function() { 
+					for(var i in towers) { 
+						towers[i].shootAtAnyWithinRange(creeps); 
+					}
+					return false;
+				}
+			];				
 
 			var target = {x : 0, y : 0};
-
-
 			$("#canvas").on("click", function(e) {
 
 				target = {x: grid.getGhost().x, y : grid.getGhost().y};
-				actionQueue = [
-					function() { 
-						for(var i in towers) { 
-							towers[i].shootAtAnyWithinRange(creeps); 
-						}
-						return false;
-					}
-				];				
 
 				for(var i in creeps) {
 					var creep = creeps[i];
@@ -404,8 +390,15 @@
 
 			function processActionQueue() {
 
-				for(var x in actionQueue) {
+/*				for(var x in actionQueue) {
 					if(actionQueue[x]()) { actionQueue.splice(x, 1); }
+				}*/
+
+				for(var i in towers) {
+					towers[i].shootAtAnyWithinRange(creeps); 
+				}
+				for(var i in creeps) {
+					creeps[i].followPath(1 + (i*0.05));
 				}
 			}
 
@@ -438,7 +431,7 @@
 
 			function processTick() {
 				var startTime = new Date().getTime();
-				var maxInterval = 15;
+				var maxInterval = 25;
 				processActionQueue();
 				pushUpdatesToCanvas();
 
