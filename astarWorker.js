@@ -1,9 +1,9 @@
 self.addEventListener('message', function(msg) {	
-	var from = msg.data.from;
-	var to = msg.data.to;
-	var occupiedSquares = msg.data.occupiedSquares;
-	var width = msg.data.width;
-	var height = msg.data.height;
+  var from = msg.data.from;
+  var to = msg.data.to;
+  var occupiedSquares = msg.data.occupiedSquares;
+  var width = msg.data.width;
+  var height = msg.data.height;
   function inList(pos, list) {
       for(var i in list) {
           if(list[i].x == pos.x && list[i].y == pos.y) {
@@ -70,8 +70,9 @@ self.addEventListener('message', function(msg) {
       current = current.parent;
   }
 
-	self.postMessage({
-	    path: finalList.reverse(),
-		subjectKey: msg.data.subjectKey
-	});
+  self.postMessage({
+    path: finalList.reverse(),
+    subjectKey: msg.data.subjectKey,
+    timed: new Date().getTime() - startTime
+  });
 }, false);
