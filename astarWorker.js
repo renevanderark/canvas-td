@@ -1,71 +1,74 @@
-self.addEventListener('message', function(msg) {	
-  var from = msg.data.from;
-  var to = msg.data.to;
-  var occupiedSquares = msg.data.occupiedSquares;
-  var width = msg.data.width;
-  var height = msg.data.height;
-  function inList(pos, list) {
-      for(var i in list) {
-          if(list[i].x == pos.x && list[i].y == pos.y) {
-              return true;
-          }
-      }
-      return false;
-  }
+self.addEventListener('message', function(msg) {  
+	var from = msg.data.from;
+	var to = msg.data.to;
+	var occupiedSquares = msg.data.occupiedSquares;
+	var width = msg.data.width;
+	var height = msg.data.height;
   
-  function inList1(pos, list) {
-      return list[pos.x][pos.y];
-  }
-  
-  function available(pos, list) {
-      return !inList(pos, openList) && !inList(pos, closedList) && !inList1(pos, occupiedSquares);
+	var openList = [from];
+  var closedList = [];
+	var openLookup = {};
+	var closedLookup = {};
+
+  function available(pos) {
+      return (
+	(occupiedSquares[pos.x + "-" + pos.y] == null || occupiedSquares[pos.x + "-" + pos.y] === false) &&
+	(closedLookup[pos.x + "-" + pos.y] == null || closedLookup[pos.x + "-" + pos.y] === false) &&
+	(openLookup[pos.x + "-" + pos.y] == null || openLookup[pos.x + "-" + pos.y] === false));
   }
 
-  function getAdjacent(pos, list) {
+	function getScore(pos) {
+		var deltaX = to.x - pos.x;
+		var deltaY = to.y - pos.y;
+		if(deltaX < 0) { deltaX = -deltaX; }
+		if(deltaY < 0) { deltaY = -deltaY; }
+		pos.score = pos.gScore + (deltaX * 10) + (deltaY * 10);
+	}
+
+	function insert(pos) {
+		openLookup[pos.x + "-" + pos.y] = true;
+		getScore(pos);
+		for(var i in openList) {
+			if(openList[i].score >= pos.score) {
+				openList.splice(i, 0, pos);
+				return;
+			}
+		}
+		openList.push(pos);
+	}
+
+  function getAdjacent(pos) {
       var left = { x : pos.x - 1, y : pos.y, parent : pos, gScore : 10 };
       var right = { x : pos.x + 1, y : pos.y, parent : pos, gScore : 10 };
       var up = { x : pos.x, y : pos.y - 1, parent : pos, gScore : 10 };
       var down = { x : pos.x, y : pos.y + 1, parent : pos, gScore : 10 };
-
-      if(left.x > -1 && available(left, list)) { list.push(left); }
-      if(right.x < width && available(right, list)) { list.push(right); }
-      if(up.y > -1 && available(up, list)) { list.push(up); }
-      if(down.y < height && available(down, list)) { list.push(down); }
-
       var tl = { x : pos.x - 1, y : pos.y - 1, parent : pos, gScore : 14 };
       var tr = { x : pos.x + 1, y : pos.y - 1, parent : pos, gScore : 14 };
       var bl = { x : pos.x - 1, y : pos.y + 1, parent : pos, gScore : 14 };
       var br = { x : pos.x + 1, y : pos.y + 1, parent : pos, gScore : 14 };
 
-      if(tl.x > -1 && tl.y > -1 && available(tl, list)) { list.push(tl); }
-      if(tr.x < width && tr.y > -1 && available(tr, list)) { list.push(tr); }
-      if(bl.x > -1 && bl.y < height && available(bl, list)) { list.push(bl); }
-      if(br.x < width && br.y < height && available(br, list)) { list.push(br); }
+      if(left.x > -1 && available(left)) { insert(left); }
+      if(right.x < width && available(right)) { insert(right); }
+      if(up.y > -1 && available(up)) { insert(up); }
+      if(down.y < height && available(down)) {  insert(down); }
+
+      if(tl.x > -1 && tl.y > -1 && available(tl)) { insert(tl); }
+      if(tr.x < width && tr.y > -1 && available(tr)) { insert(tr); }
+      if(bl.x > -1 && bl.y < height && available(bl)) { insert(bl); }
+      if(br.x < width && br.y < height && available(br)) { insert(br); }
   }
 
-  function getScores(list) {
-      for(i in list) {
-          var deltaX = to.x - list[i].x;
-          var deltaY = to.y - list[i].y;
-          if(deltaX < 0) { deltaX = -deltaX; }
-          if(deltaY < 0) { deltaY = -deltaY; }
-          list[i].score = list[i].gScore + (deltaX * 10) + (deltaY * 10);
-      }
-  }
   var startTime = new Date().getTime();
+  if(occupiedSquares[to.x + "-" + to.y]) { return []; }
 
-  if(inList1(to, occupiedSquares)) { return []; }
-  var openList = [from];
-  var closedList = [];
   var current = {x: -1, y: -1};
   while(openList.length > 0 && !(current.x == to.x && current.y == to.y)) {               
       current = openList.shift();
+			openLookup[current.x + "-" + current.y] = false;
       closedList.push(current);
-      getAdjacent(current, openList);
-      getScores(openList);
-      openList.sort(function(a,b) { return a.score - b.score});
+			closedLookup[current.x + "-" + current.y] = true;
+      getAdjacent(current);
   }
-//              console.log("A* timed at: " + (new Date().getTime() - startTime) + "ms");
   if(openList.length == 0) { return []; }
   var finalList = [];
   current = closedList.pop();
@@ -74,9 +77,9 @@ self.addEventListener('message', function(msg) {
       current = current.parent;
   }
 
-  self.postMessage({
+	self.postMessage({
     path: finalList.reverse(),
-    subjectKey: msg.data.subjectKey,
-    timed: new Date().getTime() - startTime
-  });
+		timed: (new Date().getTime() - startTime),
+		subjectKey: msg.data.subjectKey
+	});
 }, false);
