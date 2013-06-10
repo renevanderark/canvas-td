@@ -132,7 +132,7 @@
 				for(var x = spaces.x; x < spaces.x + spaces.w; x++) {
 					for(var y = spaces.y; y < spaces.y + spaces.h; y++) {
 					//	occupiedSquares.push({x:x, y:y});
-						occupiedSquares[x + "-" + y] = true;
+						occupiedSquares[x][y] = true;
 					}
 				}
 			};
@@ -145,7 +145,7 @@
 								occupiedSquares.splice(i, 1);
 							}
 						}*/
-						occupiedSquares[x + "-" + y] = false;
+						occupiedSquares[x][y] = false;
 					}
 				}
 			};
@@ -167,6 +167,11 @@
 					subjectKey: subject.getHashKey()
 				});
 			};
+			for(var x = 0; x < width; x++) {
+				for(var y = 0; y < height; y++){
+					occupiedSquares[x][y] = false;
+				}
+			}
 		};
 
 		function makeid() {
