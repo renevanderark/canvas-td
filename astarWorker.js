@@ -14,7 +14,7 @@ self.addEventListener('message', function(msg) {
   }
   
   function inList1(pos, list) {
-      return list[pos.x + "-" + pos.y];
+      return list[pos.x][pos.y];
   }
   
   function available(pos, list) {
