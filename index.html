@@ -2,11 +2,11 @@
 <head>
 	<script type="text/javascript" src="rgbcolor.js"></script> 
 	<script type="text/javascript" src="canvg.js"></script> 
+	<script type="text/javascript" src="astarWorker.js"></script> 
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" ></script>
 	<meta name="viewport" content="width=device-width, initial-scale=0.5, user-scalable=no"/>
 
 	<script type="text/javascript">
-		var actionQueue = [];
 		var settings = {
 			scaleFactor: 1.0
 		};
@@ -102,16 +102,21 @@
 			};
 
 			this.drawOccupied = function() {
-/*				ctx.strokeStyle = "#f00";
+				ctx.strokeStyle = "#f00";
 				ctx.beginPath();
-				for(var i in occupiedSquares) {
-					ctx.rect(
-						occupiedSquares[i].x * 10 / settings.scaleFactor, 
-						occupiedSquares[i].y * 10 / settings.scaleFactor, 
-						10 / settings.scaleFactor,
-						10 / settings.scaleFactor);
+
+				for(var x = 0; x < width; x++) {
+					for(var y = 0; y < height; y++) {
+						if(occupiedSquares[x + "-" + y] == true) {
+							ctx.rect(
+								x * 10 / settings.scaleFactor, 
+								y * 10 / settings.scaleFactor, 
+								10 / settings.scaleFactor,
+								10 / settings.scaleFactor);
+						}
+					}
 				}
-				ctx.stroke();*/
+				ctx.stroke();
 			};
 
 			this.draw = function() {
@@ -144,11 +149,30 @@
 				}
 			};
 
+			this.available = function(spaces) {
+				for(var x = spaces.x; x < spaces.x + spaces.w; x++) {
+					for(var y = spaces.y; y < spaces.y + spaces.h; y++) {
+						if(occupiedSquares[x + "-" + y] == true) { return false; }
+					}
+				}
+				return true;
+			};
+
 			var pathSubjects = [];
 			astarWorker.addEventListener('message', function(msg) {
-				console.log(msg.data.timed + "ms");
+				console.log("A*: " + msg.data.timed + "ms");
 				pathSubjects[msg.data.subjectKey].setPath(msg.data.path);
 			}, false);
+
+			this.testPath = function(from, to, subject) {
+				return aStar({data: {
+					from: from, 
+					to: to, 
+					occupiedSquares: occupiedSquares,
+					width: width,
+					height: height
+				}}).length > 0;
+			};
 
 			this.getPath = function(from, to, subject) {
 				pathSubjects[subject.getHashKey()] = subject;
@@ -211,8 +235,6 @@
 
 			this.setPath = function(setPath) {
 				path = setPath;
-				var _self = this;
-				actionQueue.push(function() { return _self.followPath(speed); });
 			};
 
 			/** Action queue targets; returning true means target is achieved and action can be removed from the queue **/
@@ -227,7 +249,6 @@
 
 			this.moveTo = function(targetX, targetY, spd) {
 				updated = true;
-				var speed = spd || 1.0
 				var deltaX = targetX - x;
 				var deltaY = targetY - y;
 				var mag = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
@@ -266,13 +287,15 @@
 
 			this.getGameObject = function() { return gameObject; }
 
-			this.place = function() {				
+			this.place = function() {
+				if(!grid.available({x: gridX, y: gridY, w: 2, h: 2})) { return false; }
+
 				grid.occupy({x: gridX, y: gridY, w: 2, h: 2});
-/*				if(grid.getPath({x: 0, y: 15}, {x: 31, y: 15}).length == 0 ||
-					grid.getPath({x: 15, y: 0}, {x: 15, y: 31}).length == 0) {
+				if(!grid.testPath({x: 0, y: 15}, {x: 31, y: 15}) ||
+					!grid.testPath({x: 15, y: 0}, {x: 15, y: 31})) {
 					grid.deOccupy({x: gridX, y: gridY, w: 2, h: 2});
 					return false;
-				}*/
+				}
 
 				return true;
 			};
@@ -333,46 +356,32 @@
 				c.height = c.width;
 				$('#bg')[0].width = c.width;
 				$('#bg')[0].height = c.height;
-				settings.scaleFactor = 320 / c.width;
+				settings.scaleFactor = 310 / c.width;
 				sprites.creep.init();
 				sprites.pelletTower.init();
 				for(i in gameObjects) { gameObjects[i].setUpdated(true); }
 			}
 			$(window).resize(doResize);
 
-			for(var x = 1; x < 30; x+= 2) {
-				for(var y = 1; y < 30; y += 4) {
-					var pelletTower = new PelletTower({context: ctx, grid: grid, x: x, y: y});
-					if(pelletTower.place()) {
-						towers.push(pelletTower);
-						gameObjects.push(pelletTower.getGameObject());
-					} else {
-						console.log("BLOCKING");
-					}
-				}
-			}
+
 			for(var i = 0; i < 20; ++i) {
-				var creep = new GameObject(sprites.creep, ctx, {x: i*20, y: 10, zIndex: 1, speed: 1 + (1-i / 20)});
+				var creep = new GameObject(sprites.creep, ctx, {x: -(5*i) * settings.scaleFactor, y: 75 / settings.scaleFactor, zIndex: 1, speed: 0.5});
 				creeps.push(creep);
 				gameObjects.push(creep);
+				creep.getPathTo(grid, {x: 31, y: 15});
 			}
-			actionQueue = [
-				function() { 
-					for(var i in towers) { 
-						towers[i].shootAtAnyWithinRange(creeps); 
-					}
-					return false;
-				}
-			];				
 
 			var target = {x : 0, y : 0};
 			$("#canvas").on("click", function(e) {
-
-				target = {x: grid.getGhost().x, y : grid.getGhost().y};
-
-				for(var i in creeps) {
-					var creep = creeps[i];
-					creep.getPathTo(grid, target);
+				var pelletTower = new PelletTower({context: ctx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
+				if(pelletTower.place()) {
+					towers.push(pelletTower);
+					gameObjects.push(pelletTower.getGameObject());
+					for(var x in creeps) {
+						creeps[x].getPathTo(grid, {x: 31, y: 15});
+					}
+				} else {
+					console.log("BLOCKING");
 				}
 			});
 
@@ -390,9 +399,6 @@
 
 			function processActionQueue() {
 
-/*				for(var x in actionQueue) {
-					if(actionQueue[x]()) { actionQueue.splice(x, 1); }
-				}*/
 
 				for(var i in towers) {
 					towers[i].shootAtAnyWithinRange(creeps); 
@@ -416,7 +422,12 @@
 			function drawCanvas() {
 				grid.clearGhost();
 				grid.drawGhost();
+				grid.drawOccupied();
 
+				processActionQueue();
+				pushUpdatesToCanvas();
+
+				var start = new Date().getTime();
 				var i = 0;
 				var drawList = [];
 				while(redrawList.length > 0 && ++i < 500) {
@@ -431,14 +442,11 @@
 
 			function processTick() {
 				var startTime = new Date().getTime();
-				var maxInterval = 25;
-				processActionQueue();
-				pushUpdatesToCanvas();
+				var maxInterval = 15;
 
 				var elapsedTime = new Date().getTime() - startTime;
 				setTimeout(processTick, maxInterval - (elapsedTime > maxInterval ? 0 : elapsedTime));
 			}
-			processTick();
 			drawCanvas();
 		});
 
