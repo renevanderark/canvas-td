@@ -102,7 +102,7 @@
 			};
 
 			this.drawOccupied = function() {
-				ctx.strokeStyle = "#f00";
+/*				ctx.strokeStyle = "#f00";
 				ctx.beginPath();
 				for(var i in occupiedSquares) {
 					ctx.rect(
@@ -111,7 +111,7 @@
 						10 / settings.scaleFactor,
 						10 / settings.scaleFactor);
 				}
-				ctx.stroke();
+				ctx.stroke();*/
 			};
 
 			this.draw = function() {
@@ -131,7 +131,7 @@
 			this.occupy = function(spaces) {
 				for(var x = spaces.x; x < spaces.x + spaces.w; x++) {
 					for(var y = spaces.y; y < spaces.y + spaces.h; y++) {
-						occupiedSquares.push({x:x, y:y});
+						occupiedSquares[x + "-" + y] = true;
 					}
 				}
 			};
@@ -139,18 +139,14 @@
 			this.deOccupy = function(spaces) {
 				for(var x = spaces.x; x < spaces.x + spaces.w; x++) {
 					for(var y = spaces.y; y < spaces.y + spaces.h; y++) {
-						for(var i in occupiedSquares) {
-							if(occupiedSquares[i].x == x && occupiedSquares[i].y == y) {
-								occupiedSquares.splice(i, 1);
-							}
-						}	
+						occupiedSquares[x + "-" + y] = false;	
 					}
 				}
 			};
 
 			var pathSubjects = [];
 			astarWorker.addEventListener('message', function(msg) {
-			
+				console.log(msg.data.timed + "ms");
 				pathSubjects[msg.data.subjectKey].setPath(msg.data.path);
 			}, false);
 
@@ -435,7 +431,7 @@
 
 			function processTick() {
 				var startTime = new Date().getTime();
-				var maxInterval = 15;
+				var maxInterval = 25;
 				processActionQueue();
 				pushUpdatesToCanvas();
 
