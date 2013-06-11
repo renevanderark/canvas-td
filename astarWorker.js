@@ -1,4 +1,4 @@
-self.addEventListener('message', function(msg) {	
+function aStar(msg) {
 	var from = msg.data.from;
 	var to = msg.data.to;
 	var occupiedSquares = msg.data.occupiedSquares;
@@ -58,7 +58,6 @@ self.addEventListener('message', function(msg) {
       if(br.x < width && br.y < height && available(br)) { insert(br); }
   }
 
-  var startTime = new Date().getTime();
   if(occupiedSquares[to.x + "-" + to.y]) { return []; }
 
   var current = {x: -1, y: -1};
@@ -76,9 +75,13 @@ self.addEventListener('message', function(msg) {
       finalList.push(current);
       current = current.parent;
   }
+	return finalList.reverse();
+}
 
+self.addEventListener('message', function(msg) {	
+  	var startTime = new Date().getTime();
 	self.postMessage({
-    path: finalList.reverse(),
+    path: aStar(msg),
 		timed: (new Date().getTime() - startTime),
 		subjectKey: msg.data.subjectKey
 	});
