@@ -57,7 +57,7 @@
 			pelletTower:  new Sprite("pellet.svg", 20, 20)
 		};
 
-		var Grid = function(ctx, options) {
+		var Grid = function(ctx, fgCtx, options) {
 			var opts = options || {};
 			var width = opts.width || 32;
 			var height = opts.height || 32;
@@ -80,14 +80,14 @@
 
 			this.clearGhost = function() {
 				if(clearGhostRect) {
-					ctx.clearRect(clearGhostRect.x, clearGhostRect.y, clearGhostRect.w, clearGhostRect.h);
+					fgCtx.clearRect(clearGhostRect.x, clearGhostRect.y, clearGhostRect.w, clearGhostRect.h);
 				}
 			};
 
 			this.drawGhost = function() { 
 				if(ghost.x > -1 && ghost.y > -1) {
-					ctx.fillStyle = "#ddd";	
-					ctx.fillRect(ghost.x * 10 / settings.scaleFactor, 
+					fgCtx.fillStyle = "rgba(128,128,128,0.3)";	
+					fgCtx.fillRect(ghost.x * 10 / settings.scaleFactor, 
 						ghost.y * 10 / settings.scaleFactor, 
 						ghost.w * 10 / settings.scaleFactor,
 						ghost.h * 10 / settings.scaleFactor);
@@ -340,8 +340,10 @@
 			var c = $('#canvas')[0];
 			doResize();
 			var ctx = c.getContext('2d');
+			var bgCtx = $('#bg')[0].getContext('2d');
+			var mgCtx = $('#mg')[0].getContext('2d');
 
-			var grid = new Grid($('#bg')[0].getContext('2d'));
+			var grid = new Grid(bgCtx, ctx);
 			var path = [];
 
 			var creeps = [];
@@ -356,6 +358,8 @@
 				c.height = c.width;
 				$('#bg')[0].width = c.width;
 				$('#bg')[0].height = c.height;
+				$('#mg')[0].width = c.width;
+				$('#mg')[0].height = c.height;
 				settings.scaleFactor = 310 / c.width;
 				sprites.creep.init();
 				sprites.pelletTower.init();
@@ -365,7 +369,7 @@
 
 
 			for(var i = 0; i < 20; ++i) {
-				var creep = new GameObject(sprites.creep, ctx, {x: -(5*i) * settings.scaleFactor, y: 75 / settings.scaleFactor, zIndex: 1, speed: 0.5});
+				var creep = new GameObject(sprites.creep, mgCtx, {x: -(5*i) * settings.scaleFactor, y: 75 / settings.scaleFactor, zIndex: 1, speed: 0.5});
 				creeps.push(creep);
 				gameObjects.push(creep);
 				creep.getPathTo(grid, {x: 31, y: 15});
@@ -373,7 +377,7 @@
 
 			var target = {x : 0, y : 0};
 			$("#canvas").on("click", function(e) {
-				var pelletTower = new PelletTower({context: ctx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
+				var pelletTower = new PelletTower({context: mgCtx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
 				if(pelletTower.place()) {
 					towers.push(pelletTower);
 					gameObjects.push(pelletTower.getGameObject());
@@ -456,7 +460,9 @@
 <a href="http://github.com/renevanderark/canvas-td">back to github</a>
 <canvas id="bg" style="border: 1px solid; margin: 0; position: absolute; z-index: 0; left: 0; top: 30">
 </canvas>
-<canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 30">
+<canvas id="mg" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 30">
+</canvas>
+<canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 2; left: 0; top: 30">
 </canvas>
 
 </body>
