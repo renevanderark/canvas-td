@@ -369,7 +369,7 @@
 
 
 			for(var i = 0; i < 20; ++i) {
-				var creep = new GameObject(sprites.creep, ctx, {x: -(5*i) * settings.scaleFactor, y: 75 / settings.scaleFactor, zIndex: 1, speed: 0.5});
+				var creep = new GameObject(sprites.creep, mgCtx, {x: -(5*i) * settings.scaleFactor, y: 75 / settings.scaleFactor, zIndex: 1, speed: 0.5});
 				creeps.push(creep);
 				gameObjects.push(creep);
 				creep.getPathTo(grid, {x: 31, y: 15});
