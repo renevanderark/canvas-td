@@ -1,9 +1,25 @@
 <html>
+<!--
+	The canvas tower defense game! :)
+    Copyright (C) 2013  René van der Ark
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
 <head>
 	<script type="text/javascript" src="rgbcolor.js"></script> 
 	<script type="text/javascript" src="canvg.js"></script> 
 	<script type="text/javascript" src="astarWorker.js"></script> 
-	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js" ></script>
 	<meta name="viewport" content="width=device-width, initial-scale=0.5, user-scalable=no"/>
 
 	<script type="text/javascript">
@@ -13,42 +29,58 @@
 
 
 		var Sprite = function(svg, w, h, scaleFactor) {
-			var canvas = null;
-			this.init = function() {
-				canvas = document.createElement('canvas');
-				var ctx = canvas.getContext('2d');				
-				canvas.width = Math.floor(w / settings.scaleFactor);
-				canvas.height = Math.floor(h / settings.scaleFactor);
-				ctx.drawSvg(svg, 0, 0, Math.floor(w / settings.scaleFactor), Math.floor(h / settings.scaleFactor));
+			var canvas1 = document.createElement('canvas');
+			var canvasArray = [];
+			this.init = function(initW, initH) {
+				var ctx1 = canvas1.getContext('2d');
+				w = Math.floor((initW || w) / settings.scaleFactor);
+				h = Math.floor((initH || h) / settings.scaleFactor);
+				canvas1.width = w;
+				canvas1.height = h;
+
+				ctx1.drawSvg(svg, 0, 0, w, h); 
+				for(var deg = 0; deg < 361; deg++) {
+					canvasArray[deg] = document.createElement('canvas');					
+					canvasArray[deg].width = w;
+					canvasArray[deg].height = h;
+					var ctx = canvasArray[deg].getContext('2d');					
+					_draw(ctx, deg);
+				}
 			}
 
-			function rotate(ctx, ang) {
+			function _rotate(ctx, ang) {
 				ctx.rotate(ang * (Math.PI / 180));
 			}
 
-			function translate(ctx, x, y) {
-				ctx.translate((x+(w/2)) / settings.scaleFactor, (y+(h/2)) / settings.scaleFactor);
+			function _drawImage(ctx) {
+				ctx.drawImage(canvas1, -(w/2), -(h/2));
 			}
 
-			function drawImage(ctx) {
-				ctx.drawImage(canvas, Math.floor(-(w/2) / settings.scaleFactor), Math.floor(-(h/2) / settings.scaleFactor));
-			}
-
-			this.draw = function(ctx, x, y, ang) {
+			var _draw = function(ctx, ang) {
 				ctx.save();
-				translate(ctx, x, y);
-				rotate(ctx, ang);
-				drawImage(ctx);
+				ctx.translate((w/2), (h/2));
+				_rotate(ctx, ang);
+				_drawImage(ctx);
 				ctx.restore();
+			};
+
+			this.draw = function(ctx, x, y, angF) {
+				var ang = parseInt(angF);
+				if(ang < 0) { ang = 360 + ang; }
+				ctx.drawImage(canvasArray[ang], 
+					Math.floor(x / settings.scaleFactor), 
+					Math.floor(y / settings.scaleFactor));
 				return {
 					x : Math.ceil(x / settings.scaleFactor)-1, 
 					y : Math.ceil(y / settings.scaleFactor)-1,
-					w : Math.ceil(w / settings.scaleFactor)+2,
-					h : Math.ceil(h / settings.scaleFactor)+2,
+					w : Math.ceil(w)+2,
+					h : Math.ceil(h)+2,
 				};
 			}
-			this.getW = function() { return w; }
-			this.getH = function() { return h; }
+
+
+			this.getW = function() { return w * settings.scaleFactor; }
+			this.getH = function() { return h * settings.scaleFactor; }
 			this.init();
 		}
 
@@ -65,9 +97,6 @@
 			var occupiedSquares = [];
 			var clearGhostRect = null;
 			var astarWorker = new Worker('astarWorker.js');
-
-
-
 
 			this.setGhost = function(dims) {
 				ghost.x = dims.x;
@@ -144,7 +173,12 @@
 			this.deOccupy = function(spaces) {
 				for(var x = spaces.x; x < spaces.x + spaces.w; x++) {
 					for(var y = spaces.y; y < spaces.y + spaces.h; y++) {
-						occupiedSquares[x + "-" + y] = false;	
+						occupiedSquares[x + "-" + y] = false;
+						ctx.clearRect(
+							Math.floor(x * 10 / settings.scaleFactor) - 1, 
+							Math.floor(y * 10 / settings.scaleFactor) - 1, 
+							Math.ceil(10 / settings.scaleFactor) + 2,
+							Math.ceil(10 / settings.scaleFactor) + 2);	
 					}
 				}
 			};
@@ -213,7 +247,7 @@
 			var bgBuf = document.createElement("canvas");
 			var updated = true;
 			var hashKey = makeid();
-			var newPath = false;
+			var newPath = [];
 			var pathTimeIndex = 0;
 			var pathPending = false;
 
@@ -247,28 +281,22 @@
 
 			this.handlePath = function(p, requestTimeIndex) {
 				/** if this handler was called by an outdated worker, ignore it **/
-				console.log("Handler: " + requestTimeIndex);
-				console.log("Mine:    " +  pathTimeIndex);
-				if(requestTimeIndex < pathTimeIndex) { console.log("IGNORE PATH"); return; }
+				if(requestTimeIndex < pathTimeIndex) { return; }
 				pathPending = false;
-				if(newPath.length == 0) {
-					newPath = false
-				} else {
-					newPath = p;
-					this.setPath(newPath); /** this will happen elsewhere **/
-				}
+				newPath = p;
 			};
 
 			this.getNewPath = function() { return newPath; };
 
 			this.setPath = function(setPath) {
-				path = setPath;
+				path = (setPath || []);
 			};
 
 			/** Action queue targets; returning true means target is achieved and action can be removed from the queue **/
 			this.followPath = function(spd) {
 				if(path.length == 0) { return true; }
 				var t = path[0];
+				if(t  == undefined) { return; }
 				if(this.moveTo(t.x * 10 + 5, t.y * 10 + 5, spd)) {
 					path.shift();
 				}
@@ -315,17 +343,46 @@
 
 			this.getGameObject = function() { return gameObject; }
 
-			this.place = function() {
-				if(!grid.available({x: gridX, y: gridY, w: 2, h: 2})) { return false; }
+
+			var _pollPaths = function(creeps, onFailure, onSuccess) {
+
+				for(var i in creeps) {
+					if(creeps[i].isPathPending()) {
+						setTimeout(function() { _pollPaths(creeps, onFailure, onSuccess) }, 1);
+						return;
+					}
+					if(creeps[i].getNewPath().length == 0) {
+						_deOccupyGrid();
+						onFailure("Creep path is blocked");
+						return;
+					}
+				}
+				onSuccess();
+			};
+
+			var _deOccupyGrid = function() {
+				grid.deOccupy({x: gridX, y: gridY, w: 2, h: 2});
+			};
+
+			this.place = function(opts) {				
+				if(!grid.available({x: gridX, y: gridY, w: 2, h: 2})) { 
+					opts.onFailure("Grid space is occupied"); 
+					return;
+				}
 
 				grid.occupy({x: gridX, y: gridY, w: 2, h: 2});
 				if(!grid.testPath({x: 0, y: 15}, {x: 31, y: 15}) ||
 					!grid.testPath({x: 15, y: 0}, {x: 15, y: 31})) {
-					grid.deOccupy({x: gridX, y: gridY, w: 2, h: 2});
-					return false;
+					_deOccupyGrid();
+					opts.onFailure("Paths are blocked");
+					return;
 				}
 
-				return true;
+				for(var x in opts.creeps) {
+					opts.creeps[x].getPathTo(grid, {x: 31, y: 15});
+				}
+
+				_pollPaths(opts.creeps, opts.onFailure, opts.onSuccess);
 			};
 
 			var currentTarget = null;
@@ -356,6 +413,7 @@
 		};
 
 		window.requestAnimFrame = (function(){
+
 		  return  window.requestAnimationFrame       ||
 			  window.webkitRequestAnimationFrame ||
 			  window.mozRequestAnimationFrame    ||
@@ -364,12 +422,12 @@
 			  };
 		})();
 
-		$(document).ready(function() {
-			var c = $('#canvas')[0];
+		window.onload = function() {
+			var c = document.getElementById('canvas');
 			doResize();
 			var ctx = c.getContext('2d');
-			var bgCtx = $('#bg')[0].getContext('2d');
-			var mgCtx = $('#mg')[0].getContext('2d');
+			var bgCtx = document.getElementById('bg').getContext('2d');
+			var mgCtx = document.getElementById('mg').getContext('2d');
 
 			var grid = new Grid(bgCtx, ctx);
 			var path = [];
@@ -379,82 +437,78 @@
 			var gameObjects = [];
 
 			function doResize() {
-				var c = $('#canvas')[0];
+				var c = document.getElementById('canvas');
 				var ww = (window.innerWidth || document.body.clientWidth) - 50;
 				var wh = (window.innerHeight || document.body.clientHeight) - 50;
 				c.width =  (ww > wh ? wh : ww);
 				c.height = c.width;
-				$('#bg')[0].width = c.width;
-				$('#bg')[0].height = c.height;
-				$('#mg')[0].width = c.width;
-				$('#mg')[0].height = c.height;
+				document.getElementById('bg').width = c.width;
+				document.getElementById('bg').height = c.height;
+				document.getElementById('mg').width = c.width;
+				document.getElementById('mg').height = c.height;
 				settings.scaleFactor = 310 / c.width;
-				sprites.creep.init();
-				sprites.pelletTower.init();
+				sprites.creep.init(8,8);
+				sprites.pelletTower.init(20,20);
 				for(i in gameObjects) { gameObjects[i].setUpdated(true); }
 			}
-			$(window).resize(doResize);
+			window.onresize = doResize;
 
 
 			for(var i = 0; i < 20; ++i) {
-				var creep = new GameObject(sprites.creep, mgCtx, {x: -(5*i) * settings.scaleFactor, y: 75 / settings.scaleFactor, zIndex: 1, speed: 0.5});
+				var creep = new GameObject(sprites.creep, mgCtx, {x: -(5*i) * settings.scaleFactor, y: 75 / settings.scaleFactor, zIndex: 1, speed: 0.3});
 				creeps.push(creep);
 				gameObjects.push(creep);
-				creep.getPathTo(grid, {x: 31, y: 15});
+				creep.getPathTo(grid, {x: 31, y: 15});				
 			}
 
 			var target = {x : 0, y : 0};
-			$("#canvas").on("click", function(e) {
-				var pelletTower = new PelletTower({context: mgCtx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
-
-				/// check whether tower blocks the paths from origin to target
-				if(pelletTower.place()) {
-					/** TODO (asynchronously):
-						- block the possibility to place a new tower
-						- let creeps calculate their path in the new situation
-						- regularly check whether all pending paths are in (creep.isPathPending())
-						- when all paths are in check whether they are valid:
-							- creep.getNewPath().length > 0
-							- (!)and not reached final target already(!))
-						- if all paths are valid:
-							- push the tower to the towers and gameObjects array resp.
-							- creep.setPath(creep.getNewPath())
-						- else BLOCKING: 
-							- deOccupy the grid and do not push the tower to the towers array nor to the gameObjects array
-						- unblock the possibility to place a new tower
-					**/
-
-					towers.push(pelletTower);
-					gameObjects.push(pelletTower.getGameObject());
-
-					for(var x in creeps) {
-						creeps[x].getPathTo(grid, {x: 31, y: 15});
-					}
+			var blockNewPlacement = false;
+			document.getElementById("canvas").onclick = function(e) {
+				if(blockNewPlacement) {
+					shinyMessage("still validating last placement");
 				} else {
-					console.log("BLOCKING");
+					var pelletTower = new PelletTower({context: mgCtx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
+					blockNewPlacement = true;
+
+					pelletTower.place({
+						creeps: creeps,
+						onSuccess: function() { 
+							towers.push(pelletTower);
+							gameObjects.push(pelletTower.getGameObject());
+							for(var i in creeps) {
+								creeps[i].setPath(creeps[i].getNewPath());
+							}
+							blockNewPlacement = false;
+						},
+						onFailure: function(reason) {
+							shinyMessage(reason);
+							blockNewPlacement = false;
+						}
+					});
 				}
-			});
 
-			$("#canvas").on("mouseout", function(e) {
+			};
+
+			document.getElementById("canvas").onmouseout = function(e) {
 				grid.setGhost({ x : -1, y : -1 });
-			});
+			};
 
-			$("#canvas").on("mousemove", function(e) {
-				var parentOffset = $(this).offset(); 
+			document.getElementById("canvas").onmousemove = function(e) {
 				grid.setGhost({
-					x : Math.floor(((e.pageX - parentOffset.left) * settings.scaleFactor) / 10),
-					y : Math.floor(((e.pageY - parentOffset.top) * settings.scaleFactor) / 10)
+					x : Math.floor(((e.pageX - this.offsetLeft) * settings.scaleFactor) / 10),
+					y : Math.floor(((e.pageY - this.offsetTop) * settings.scaleFactor) / 10)
 				});
-			});
+			};
 
 			function processActionQueue() {
-
-
 				for(var i in towers) {
 					towers[i].shootAtAnyWithinRange(creeps); 
 				}
 				for(var i in creeps) {
-					creeps[i].followPath(1 + (i*0.05));
+					if(creeps[i].followPath()) {
+						creeps.splice(i, 1);
+						shinyMessage(creeps.length +  " creeps left");
+					}
 				}
 			}
 
@@ -462,14 +516,14 @@
 			var redrawList = [];
 			function pushUpdatesToCanvas() {
 				for(var i in gameObjects) {
-					if(gameObjects[i].isUpdated() && $.inArray(gameObjects[i], redrawList) == -1) {
+					if(gameObjects[i].isUpdated() /**&& $.inArray(gameObjects[i], redrawList) == -1**/) {
 						redrawList.push(gameObjects[i]);
 					}
 				}
 				redrawList.sort(function(a,b) { return b.getZ() - a.getZ(); });
 			}
 
-			function drawCanvas() {
+			function processTick() {
 				grid.clearGhost();
 				grid.drawGhost();
 				grid.drawOccupied();
@@ -487,23 +541,31 @@
 				}
 
 				for(var x in drawList) { drawList[x].draw(); }
-				requestAnimFrame(drawCanvas);
+				requestAnimFrame(processTick);
 			}
 
-			function processTick() {
-				var startTime = new Date().getTime();
-				var maxInterval = 15;
-
-				var elapsedTime = new Date().getTime() - startTime;
-				setTimeout(processTick, maxInterval - (elapsedTime > maxInterval ? 0 : elapsedTime));
+			function pollForPaths() {
+				for(var i in creeps) {
+					if(creeps[i].isPathPending()) {
+						setTimeout(pollForPaths, 1);
+						return;
+					} else { 
+						creeps[i].setPath(creeps[i].getNewPath());
+					}
+				}
+				processTick();
 			}
-			drawCanvas();
-		});
+			pollForPaths();
+		};
 
+		function shinyMessage(txt) {
+			document.getElementById('msg').innerHTML = txt;
+		}
 	</script>
 </head>
 <body >
 <a href="http://github.com/renevanderark/canvas-td">back to github</a>
+<span id="msg"></span>
 <canvas id="bg" style="border: 1px solid; margin: 0; position: absolute; z-index: 0; left: 0; top: 30">
 </canvas>
 <canvas id="mg" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 30">
