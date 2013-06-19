@@ -23,6 +23,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=0.5, user-scalable=no"/>
 
 	<script type="text/javascript">
+		var gameObjects = [];
 		var settings = {
 			scaleFactor: 1.0
 		};
@@ -43,7 +44,7 @@
 					canvasArray[deg] = document.createElement('canvas');					
 					canvasArray[deg].width = w;
 					canvasArray[deg].height = h;
-					var ctx = canvasArray[deg].getContext('2d');					
+					var ctx = canvasArray[deg].getContext('2d');
 					_draw(ctx, deg);
 				}
 			}
@@ -86,7 +87,8 @@
 
 		var sprites = {
 			creep: new Sprite("creep.svg", 8, 8),
-			pelletTower:  new Sprite("pellet.svg", 20, 20)
+			pelletTower:  new Sprite("pellet.svg", 20, 20),
+			bullet: new Sprite("bullet.svg", 5,5)
 		};
 
 		var Grid = function(ctx, fgCtx, options) {
@@ -247,10 +249,14 @@
 			var bgBuf = document.createElement("canvas");
 			var updated = true;
 			var hashKey = makeid();
+			var _index = -1;
 			var newPath = [];
 			var pathTimeIndex = 0;
 			var pathPending = false;
-
+			
+			
+			this.setIndex = function(idx) { _index = idx; }
+			this.getIndex = function() { return _index; }
 			this.isUpdated = function() { return updated; }
 			this.setUpdated = function(up) { updated = up; }
 			this.getHashKey = function() { return hashKey; }
@@ -339,6 +345,7 @@
 			var maxBullets = 1;
 
 			var ctx = opts.context;
+			var bulletCtx = opts.bulletContext;
 			var grid = opts.grid;
 			var gridX = opts.x;
 			var gridY = opts.y;
@@ -388,8 +395,24 @@
 				_pollPaths(opts.creeps, opts.onFailure, opts.onSuccess);
 			};
 
+			
+
 			var _shootAt = function(otherGameObject) {
 				gameObject.pointTo(otherGameObject); 
+				if(bullets.length < maxBullets) {
+					var bullet = new GameObject(sprites.bullet, bulletCtx, {x: gameObject.getX(), y: gameObject.getY(), zIndex: 0, speed: 1});
+					bullets.push(bullet);
+					bullet.setIndex(gameObjects.push(bullet)-1);
+					bullet.setUpdated(true);
+				}
+
+				for(var i in bullets) {
+					if(bullets[i].moveToOther(otherGameObject)) {
+						bullets[i].clear();
+						gameObjects[bullets[i].getIndex()] = false;
+						bullets.splice(i, 1);
+					}
+				}
 				return false;	
 			};
 
@@ -399,6 +422,11 @@
 					var deltaY = others[i].getY() - gameObject.getY();
 					var distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
 					if(distance <= range) { return _shootAt(others[i]); }
+				}
+				for(var i in bullets) {
+					bullets[i].clear();
+					gameObjects[bullets[i].getIndex()] = false;
+					bullets.splice(i, 1);
 				}
 				return false;
 			};
@@ -426,7 +454,6 @@
 
 			var creeps = [];
 			var towers = [];
-			var gameObjects = [];
 
 			function doResize() {
 				var c = document.getElementById('canvas');
@@ -441,7 +468,8 @@
 				settings.scaleFactor = 310 / c.width;
 				sprites.creep.init(8,8);
 				sprites.pelletTower.init(20,20);
-				for(i in gameObjects) { gameObjects[i].setUpdated(true); }
+				sprites.bullet.init(4,4);
+				for(i in gameObjects) { if(gameObjects[i]) { gameObjects[i].setUpdated(true); } }
 			}
 			window.onresize = doResize;
 
@@ -459,7 +487,7 @@
 				if(blockNewPlacement) {
 					shinyMessage("still validating last placement");
 				} else {
-					var pelletTower = new PelletTower({context: mgCtx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
+					var pelletTower = new PelletTower({bulletContext: bgCtx, context: mgCtx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
 					blockNewPlacement = true;
 
 					pelletTower.place({
@@ -508,7 +536,7 @@
 			var redrawList = [];
 			function pushUpdatesToCanvas() {
 				for(var i in gameObjects) {
-					if(gameObjects[i].isUpdated() /**&& $.inArray(gameObjects[i], redrawList) == -1**/) {
+					if(gameObjects[i] && gameObjects[i].isUpdated() /**&& $.inArray(gameObjects[i], redrawList) == -1**/) {
 						redrawList.push(gameObjects[i]);
 					}
 				}
@@ -518,7 +546,7 @@
 			function processTick() {
 				grid.clearGhost();
 				grid.drawGhost();
-				grid.drawOccupied();
+//				grid.drawOccupied();
 
 				processActionQueue();
 				pushUpdatesToCanvas();
@@ -555,7 +583,7 @@
 		}
 	</script>
 </head>
-<body >
+<body>
 <a href="http://github.com/renevanderark/canvas-td">back to github</a>
 <span id="msg"></span>
 <canvas id="bg" style="border: 1px solid; margin: 0; position: absolute; z-index: 0; left: 0; top: 30">
