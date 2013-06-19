@@ -335,6 +335,9 @@
 		var PelletTower = function(opts) {
 			var level = 1;
 			var range = 40;
+			var bullets = [];
+			var maxBullets = 1;
+
 			var ctx = opts.context;
 			var grid = opts.grid;
 			var gridX = opts.x;
@@ -385,28 +388,17 @@
 				_pollPaths(opts.creeps, opts.onFailure, opts.onSuccess);
 			};
 
-			var currentTarget = null;
-			this.shootAtAnyWithinRange = function(others) {
-				if(currentTarget) {
-					var deltaX = currentTarget.getX() - gameObject.getX();
-					var deltaY = currentTarget.getY() - gameObject.getY();
-					var distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
-					if(distance <= range) { 
-						gameObject.pointTo(currentTarget);  
-						return false; 
-					}
-				}
+			var _shootAt = function(otherGameObject) {
+				gameObject.pointTo(otherGameObject); 
+				return false;	
+			};
 
+			this.shootAtFirstWithinRange = function(others) {
 				for(var i in others) {
 					var deltaX = others[i].getX() - gameObject.getX();
 					var deltaY = others[i].getY() - gameObject.getY();
 					var distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
-					if(distance <= range) { 
-						currentTarget = others[i];
-						gameObject.pointTo(others[i]); 
-						// TODO: shooting
-						return false;
-					}
+					if(distance <= range) { return _shootAt(others[i]); }
 				}
 				return false;
 			};
@@ -502,7 +494,7 @@
 
 			function processActionQueue() {
 				for(var i in towers) {
-					towers[i].shootAtAnyWithinRange(creeps); 
+					towers[i].shootAtFirstWithinRange(creeps); 
 				}
 				for(var i in creeps) {
 					if(creeps[i].followPath()) {
