@@ -23,7 +23,6 @@
 	<meta name="viewport" content="width=device-width, initial-scale=0.5, user-scalable=no"/>
 
 	<script type="text/javascript">
-		var gameObjects = [];
 		var settings = {
 			scaleFactor: 1.0
 		};
@@ -277,6 +276,9 @@
 			this.getX = function() { return x; };
 			this.getY = function() { return y; };
 			this.getZ = function() { return z; };
+			
+			this.setX = function(setX) { x = setX; };
+			this.setY = function(setY) { y = setY; };
 
 			this.isPathPending = function() { return pathPending; };
 
@@ -299,17 +301,17 @@
 			};
 
 			/** Action queue targets; returning true means target is achieved and action can be removed from the queue **/
-			this.followPath = function(spd) {
+			this.followPath = function() {
 				if(path.length == 0) { return true; }
 				var t = path[0];
 				if(t  == undefined) { return; }
-				if(this.moveTo(t.x * 10 + 5, t.y * 10 + 5, spd)) {
+				if(this.moveTo(t.x * 10 + 5, t.y * 10 + 5)) {
 					path.shift();
 				}
 				return false;
 			};
 
-			this.moveTo = function(targetX, targetY, spd) {
+			this.moveTo = function(targetX, targetY) {
 				updated = true;
 				var deltaX = targetX - x;
 				var deltaY = targetY - y;
@@ -325,8 +327,8 @@
 				return false;
 			};
 
-			this.moveToOther = function(otherObject, spd) {
-				return this.moveTo(otherObject.getX(), otherObject.getY(), spd);
+			this.moveToOther = function(otherObject) {
+				return this.moveTo(otherObject.getX(), otherObject.getY());
 			};
 
 			this.pointTo = function(otherObject) {
@@ -340,8 +342,7 @@
 
 		var PelletTower = function(opts) {
 			var level = 1;
-			var range = 40;
-			var bullets = [];
+			var range = 30;
 			var maxBullets = 1;
 
 			var ctx = opts.context;
@@ -350,9 +351,10 @@
 			var gridX = opts.x;
 			var gridY = opts.y;
 			var gameObject = new GameObject(sprites.pelletTower, ctx, {x: (gridX + 1) * 10, y: (gridY + 1) * 10, zIndex: 0});
+			var bullet = new GameObject(sprites.bullet, bulletCtx, {x: gameObject.getX(), y: gameObject.getY(), zIndex: 0, speed: 1});
 
 			this.getGameObject = function() { return gameObject; }
-
+			this.getBullet = function() { return bullet; }
 
 			var _pollPaths = function(creeps, onFailure, onSuccess) {
 
@@ -399,19 +401,9 @@
 
 			var _shootAt = function(otherGameObject) {
 				gameObject.pointTo(otherGameObject); 
-				if(bullets.length < maxBullets) {
-					var bullet = new GameObject(sprites.bullet, bulletCtx, {x: gameObject.getX(), y: gameObject.getY(), zIndex: 0, speed: 1});
-					bullets.push(bullet);
-					bullet.setIndex(gameObjects.push(bullet)-1);
-					bullet.setUpdated(true);
-				}
-
-				for(var i in bullets) {
-					if(bullets[i].moveToOther(otherGameObject)) {
-						bullets[i].clear();
-						gameObjects[bullets[i].getIndex()] = false;
-						bullets.splice(i, 1);
-					}
+				if(bullet.moveToOther(otherGameObject)) {
+					bullet.setX(gameObject.getX());
+					bullet.setY(gameObject.getY());
 				}
 				return false;	
 			};
@@ -423,11 +415,9 @@
 					var distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
 					if(distance <= range) { return _shootAt(others[i]); }
 				}
-				for(var i in bullets) {
-					bullets[i].clear();
-					gameObjects[bullets[i].getIndex()] = false;
-					bullets.splice(i, 1);
-				}
+				bullet.setX(gameObject.getX());
+				bullet.setY(gameObject.getY());
+				bullet.setUpdated(true);
 				return false;
 			};
 		};
@@ -454,6 +444,7 @@
 
 			var creeps = [];
 			var towers = [];
+			var gameObjects = [];
 
 			function doResize() {
 				var c = document.getElementById('canvas');
@@ -495,6 +486,7 @@
 						onSuccess: function() { 
 							towers.push(pelletTower);
 							gameObjects.push(pelletTower.getGameObject());
+							gameObjects.push(pelletTower.getBullet());
 							for(var i in creeps) {
 								creeps[i].setPath(creeps[i].getNewPath());
 							}
