@@ -27,6 +27,8 @@
 			scaleFactor: 1.0
 		};
 
+		var sounds = {};
+
 
 		var Sprite = function(svg, w, h, scaleFactor) {
 			var canvas1 = document.createElement('canvas');
@@ -404,6 +406,7 @@
 				if(bullet.moveToOther(otherGameObject)) {
 					bullet.setX(gameObject.getX());
 					bullet.setY(gameObject.getY());
+					sounds.bullet.play();
 				}
 				return false;	
 			};
@@ -422,6 +425,30 @@
 			};
 		};
 
+		var Sample = function(audio, opts) {
+			var _nChannels = opts.channels || 1;
+			var _channels = [];
+			var _firstTimers = [];
+			for(var i = 0; i < _nChannels; i++) {
+				_channels[i] = audio.cloneNode();
+				_firstTimers[i] = _channels[i];
+			}
+
+			this.play = function() {
+				if(_firstTimers.length > 0) { 
+					_firstTimers.pop().play(); 
+					return; 
+				}
+				for(var i = 0; i < _nChannels; i++) {
+					if(_channels[i].ended) {
+						_channels[i].play();
+						return;
+					}
+				}
+			};
+		};
+
+
 		window.requestAnimFrame = (function(){
 
 		  return  window.requestAnimationFrame       ||
@@ -431,6 +458,7 @@
 			    window.setTimeout(callback, 1000 / 60);
 			  };
 		})();
+
 
 		window.onload = function() {
 			var c = document.getElementById('canvas');
@@ -445,6 +473,11 @@
 			var creeps = [];
 			var towers = [];
 			var gameObjects = [];
+
+
+			sounds.bullet = new Sample(new Audio("plop.wav"), {channels: 5});
+
+
 
 			function doResize() {
 				var c = document.getElementById('canvas');
@@ -584,6 +617,5 @@
 <canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 2; left: 0; top: 30">
 </canvas>
 
-</body>
 
 </html>
