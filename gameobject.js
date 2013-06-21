@@ -38,12 +38,12 @@ var GameObject = function(sprite, ctx, options) {
 		if(clearRect) {
 			ctx.clearRect(clearRect.x, clearRect.y, clearRect.w, clearRect.h);
 		}
-	}
+	};
 
 	this.draw = function() {
 		clearRect = sprite.draw(ctx, x - (sprite.getW()/2), y - (sprite.getH()/2), ang);
 		updated = false;
-	}
+	};
 
 	this.getX = function() { return x; };
 	this.getY = function() { return y; };
@@ -109,5 +109,5 @@ var GameObject = function(sprite, ctx, options) {
 		var deltaY = otherObject.getY() - y;
 		ang = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
 		return false;
-	};			
+	};
 }

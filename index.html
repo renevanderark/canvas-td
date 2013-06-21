@@ -59,10 +59,10 @@
 
 			var creeps = [];
 			var towers = [];
-			var gameObjects = [];
+			var bullets = [];
 
 
-			sounds.bullet = new Sample(new Audio("plop.wav"), {channels: 3});
+			sounds.bullet = new Sample(new Audio("plop.wav"), {channels: 5});
 			sounds.cheer = new Sample(new Audio("cheer.wav"), {channels: 3});
 			sounds.death = new Sample(new Audio("death.wav"), {channels: 3});
 
@@ -82,7 +82,6 @@
 				sprites.creep.init(8,8);
 				sprites.pelletTower.init(20,20);
 				sprites.bullet.init(4,4);
-				for(i in gameObjects) { if(gameObjects[i]) { gameObjects[i].setUpdated(true); } }
 			}
 			window.onresize = doResize;
 
@@ -90,14 +89,12 @@
 			for(var i = 0; i < 10; ++i) {
 				var creep = new Creep(sprites.creep, mgCtx, grid, {x: -(i), y: 15, zIndex: 1, speed: 0.3});
 				creeps.push(creep);
-				gameObjects.push(creep);
 				creep.setTarget({x: 31, y: 15});
 			}
 
 			for(var i = 0; i < 10; ++i) {
 				var creep = new Creep(sprites.creep, mgCtx, grid, {x: 15, y: -(i), zIndex: 1, speed: 0.3});
 				creeps.push(creep);
-				gameObjects.push(creep);
 				creep.setTarget({x: 15, y: 31});
 			}
 
@@ -110,13 +107,11 @@
 				} else {
 					var pelletTower = new PelletTower({bulletContext: bgCtx, context: mgCtx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
 					blockNewPlacement = true;
-
 					pelletTower.place({
 						creeps: creeps,
 						onSuccess: function() { 
 							towers.push(pelletTower);
-							gameObjects.push(pelletTower);
-							gameObjects.push(pelletTower.getBullet());
+							bullets.push(pelletTower.getBullet());
 							for(var i in creeps) {
 								creeps[i].setPath(creeps[i].getNewPath());
 							}
@@ -157,34 +152,22 @@
 				}
 			}
 
-			var redrawList = [];
-			function pushUpdatesToCanvas() {
-				for(var i in gameObjects) {
-					if(gameObjects[i] && gameObjects[i].isUpdated() /**&& $.inArray(gameObjects[i], redrawList) == -1**/) {
-						redrawList.push(gameObjects[i]);
-					}
-				}
-				redrawList.sort(function(a,b) { return b.getZ() - a.getZ(); });
-			}
-
 			function processTick() {
 				grid.clearGhost();
 				grid.drawGhost();
 				grid.drawOccupied();
 
 				processActionQueue();
-				pushUpdatesToCanvas();
 
-				var start = new Date().getTime();
-				var i = 0;
-				var drawList = [];
-				while(redrawList.length > 0 && ++i < 500) {
-					var gameObject = redrawList.pop();
-					gameObject.clear();
-					drawList.push(gameObject);
-				}
+				for(var i in towers) { if(towers[i] && towers[i].isUpdated()) { towers[i].clear(); } }
+				for(var i in bullets) { if(bullets[i] && bullets[i].isUpdated()) { bullets[i].clear(); } }
+				for(var i in creeps) { if(creeps[i] && creeps[i].isUpdated()) { creeps[i].clear(); } }
 
-				for(var x in drawList) { drawList[x].draw(); }
+				for(var i in towers) { if(towers[i] && towers[i].isUpdated()) { towers[i].draw(); } }
+				for(var i in bullets) { if(bullets[i] && bullets[i].isUpdated()) { bullets[i].draw(); } }
+				for(var i in creeps) { if(creeps[i] && creeps[i].isUpdated()) { creeps[i].draw(); } }
+
+
 				requestAnimFrame(processTick);
 			}
 
