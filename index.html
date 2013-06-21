@@ -28,6 +28,16 @@
 	<script type="text/javascript" src="sample.js"></script>
 
 	<script type="text/javascript">
+		window.requestAnimFrame = (function(){
+			return  window.requestAnimationFrame ||
+			window.webkitRequestAnimationFrame ||
+			  window.mozRequestAnimationFrame ||
+			  function(callback){
+			    window.setTimeout(callback, 1000 / 60);
+			  };
+		})();
+
+
 		var settings = { scaleFactor: 1.0 };
 		var sounds = {};
 		var sprites = {
@@ -36,17 +46,8 @@
 			bullet: new Sprite("bullet.svg", 5,5)
 		};
 
-		window.requestAnimFrame = (function(){
-			return  window.requestAnimationFrame ||
-			  window.webkitRequestAnimationFrame ||
-			  window.mozRequestAnimationFrame ||
-			  function(callback){
-			    window.setTimeout(callback, 1000 / 60);
-			  };
-		})();
-
-
 		window.onload = function() {
+
 			var c = document.getElementById('canvas');
 			doResize();
 			var ctx = c.getContext('2d');
@@ -60,6 +61,8 @@
 			var creeps = [];
 			var towers = [];
 			var bullets = [];
+			var currentLevel = 1;
+			var currentLives = 20;
 
 
 			sounds.bullet = new Sample(new Audio("plop.wav"), {channels: 5});
@@ -84,20 +87,6 @@
 				sprites.bullet.init(4,4);
 			}
 			window.onresize = doResize;
-
-
-			for(var i = 0; i < 10; ++i) {
-				var creep = new Creep(sprites.creep, mgCtx, grid, {x: -(i), y: 15, zIndex: 1, speed: 0.3});
-				creeps.push(creep);
-				creep.setTarget({x: 31, y: 15});
-			}
-
-			for(var i = 0; i < 10; ++i) {
-				var creep = new Creep(sprites.creep, mgCtx, grid, {x: 15, y: -(i), zIndex: 1, speed: 0.3});
-				creeps.push(creep);
-				creep.setTarget({x: 15, y: 31});
-			}
-
 
 			var target = {x : 0, y : 0};
 			var blockNewPlacement = false;
@@ -143,11 +132,13 @@
 				for(var i in creeps) {
 					if(creeps[i].isDead()) {
 						creeps.splice(i, 1);
-						shinyMessage(creeps.length + " creeps left")
+						document.getElementById("creepcount").innerHTML = creeps.length;
 					} else if(creeps[i].followPath()) {
+						currentLives--;
 						creeps[i].win();
 						creeps.splice(i, 1);
-						shinyMessage(creeps.length + " creeps left")
+						document.getElementById("creepcount").innerHTML = creeps.length;
+						document.getElementById("lives").innerHTML = currentLives;
 					}
 				}
 			}
@@ -156,8 +147,17 @@
 				grid.clearGhost();
 				grid.drawGhost();
 				grid.drawOccupied();
-
+				
 				processActionQueue();
+				if(creeps.length == 0) {
+					currentLevel++;
+					initCreeps();
+					return;
+				}
+				if(currentLives <= 0) {
+					alert("Game over");
+					return;
+				}
 
 				for(var i in towers) { if(towers[i] && towers[i].isUpdated()) { towers[i].clear(); } }
 				for(var i in bullets) { if(bullets[i] && bullets[i].isUpdated()) { bullets[i].clear(); } }
@@ -171,18 +171,50 @@
 				requestAnimFrame(processTick);
 			}
 
+			function initCreeps() {
+				for(var i = 0; i < 10; ++i) {
+					var creep = new Creep(sprites.creep, mgCtx, grid, {
+						x: -i,
+						y: 15,
+						zIndex: 1,
+						speed: 0.3,
+						hitpoints: currentLevel * 5
+					});
+					creeps.push(creep);
+					creep.setTarget({x: 31, y: 15});
+				}
+
+				for(var i = 0; i < 10; ++i) {
+					var creep = new Creep(sprites.creep, mgCtx, grid, {
+						x: 15,
+						y: -i,
+						zIndex: 1,
+						speed: 0.3,
+						hitpoints: currentLevel * 3,
+						value: 5
+					});
+					creeps.push(creep);
+					creep.setTarget({x: 15, y: 31});
+				}
+				document.getElementById("level").innerHTML = currentLevel;
+				document.getElementById("creepcount").innerHTML = creeps.length;
+				document.getElementById("lives").innerHTML = currentLives;
+				pollForPaths();
+			}
+
 			function pollForPaths() {
 				for(var i in creeps) {
 					if(creeps[i].isPathPending()) {
 						setTimeout(pollForPaths, 1);
 						return;
-					} else { 
-						creeps[i].setPath(creeps[i].getNewPath());
 					}
+				}
+				for(var i in creeps) {
+					creeps[i].setPath(creeps[i].getNewPath());
 				}
 				processTick();
 			}
-			pollForPaths();
+			initCreeps();
 		};
 
 		function shinyMessage(txt) {
@@ -191,8 +223,10 @@
 	</script>
 </head>
 <body>
-<a href="http://github.com/renevanderark/canvas-td">back to github</a>
-<span id="msg"></span>
+<a href="http://github.com/renevanderark/canvas-td">github</a>
+Level: <span id="level"></span>
+Creeps left: <span id="creepcount"></span>
+Lives: <span id="lives"></span>
 <canvas id="bbg" style="border: 1px solid; margin: 0; position: absolute; z-index: 0; left: 0; top: 30">
 </canvas>
 <canvas id="bg" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 30">
@@ -201,6 +235,5 @@
 </canvas>
 <canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 3; left: 0; top: 30">
 </canvas>
-
 
 </html>
