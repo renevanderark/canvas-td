@@ -8,10 +8,19 @@ var Grid = function(ctx, fgCtx, options) {
 	var astarWorker = new Worker('astarWorker.js');
 
 	this.setGhost = function(dims) {
+		if(dims.x >= width - 3) { dims.x = width - 3; }
+		if(dims.y >= height - 3) { dims.y = height - 3; }
 		ghost.x = dims.x;
 		ghost.y = dims.y;
 		ghost.w = dims.w || ghost.w;
 		ghost.h = dims.h || ghost.h;
+	};
+
+	this.getRealPos = function(dims) {
+		return { 
+			x: ((ctx.canvas.width / width) * dims.x) * settings.scaleFactor,
+			y: ((ctx.canvas.height / height) * dims.y) * settings.scaleFactor,
+		}
 	};
 
 	this.getGhost = function() { return ghost; };

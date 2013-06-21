@@ -1,4 +1,5 @@
-var Sample = function(audio, opts) {
+var Sample = function(audio, options) {
+	var opts = options || {};
 	var _nChannels = opts.channels || 1;
 	var _channels = [];
 	var _firstTimers = [];

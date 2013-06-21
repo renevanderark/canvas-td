@@ -1,17 +1,20 @@
 var PelletTower = function(opts) {
 	var level = 1;
 	var range = 30;
+	var damage = 1;
 	var maxBullets = 1;
-
 	var ctx = opts.context;
 	var bulletCtx = opts.bulletContext;
 	var grid = opts.grid;
 	var gridX = opts.x;
 	var gridY = opts.y;
-	var gameObject = new GameObject(sprites.pelletTower, ctx, {x: (gridX + 1) * 10, y: (gridY + 1) * 10, zIndex: 0});
-	var bullet = new GameObject(sprites.bullet, bulletCtx, {x: gameObject.getX(), y: gameObject.getY(), zIndex: 0, speed: 1});
 
-	this.getGameObject = function() { return gameObject; }
+	var parent = new GameObject(sprites.pelletTower, ctx, {x: (gridX + 1) * 10, y: (gridY + 1) * 10, zIndex: 0});
+	for(var prop in parent) { this[prop] = parent[prop]; }
+
+	var bullet = new GameObject(sprites.bullet, bulletCtx, {x: this.getX(), y: this.getY(), zIndex: 0, speed: 1});
+	var currentTarget = false;
+
 	this.getBullet = function() { return bullet; }
 
 	var _pollPaths = function(creeps, onFailure, onSuccess) {
@@ -49,33 +52,48 @@ var PelletTower = function(opts) {
 		}
 
 		for(var x in opts.creeps) {
-			opts.creeps[x].getPathTo(grid, {x: 31, y: 15});
+			opts.creeps[x].getPathToTarget();
 		}
 
 		_pollPaths(opts.creeps, opts.onFailure, opts.onSuccess);
 	};
 
-	
-
-	var _shootAt = function(otherGameObject) {
-		gameObject.pointTo(otherGameObject); 
-		if(bullet.moveToOther(otherGameObject)) {
-			bullet.setX(gameObject.getX());
-			bullet.setY(gameObject.getY());
-			sounds.bullet.play();
-		}
-		return false;	
+	var _distanceTo = function(thing) {
+		var deltaX = thing.getX() - parent.getX();
+		var deltaY = thing.getY() - parent.getY();
+		return Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
 	};
 
-	this.shootAtFirstWithinRange = function(others) {
-		for(var i in others) {
-			var deltaX = others[i].getX() - gameObject.getX();
-			var deltaY = others[i].getY() - gameObject.getY();
-			var distance = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
-			if(distance <= range) { return _shootAt(others[i]); }
+	var _shoot = function() {
+		parent.pointTo(currentTarget);
+		if(bullet.moveToOther(currentTarget)) {
+			currentTarget.takeDamage(damage);
+			bullet.setX(parent.getX());
+			bullet.setY(parent.getY());
+			sounds.bullet.play();
+
+			if(_distanceTo(currentTarget) > range) {
+				currentTarget = false;
+			}
 		}
-		bullet.setX(gameObject.getX());
-		bullet.setY(gameObject.getY());
+		return false;
+	};
+
+	this.shootAtFirstWithinRange = function(creeps) {
+		if(currentTarget) { 
+			if(currentTarget.hasWon() || currentTarget.isDead()) { currentTarget = false; }
+			else { return _shoot(); }
+		}
+
+		for(var i in creeps) {
+			if(creeps[i] && _distanceTo(creeps[i]) <= range) {
+				currentTarget = creeps[i];
+				return _shoot(); 
+			}
+		}
+		currentTarget = false;
+		bullet.setX(this.getX());
+		bullet.setY(this.getY());
 		bullet.setUpdated(true);
 		return false;
 	};

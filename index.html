@@ -23,6 +23,7 @@
 	<script type="text/javascript" src="sprite.js"></script>
 	<script type="text/javascript" src="grid.js"></script>
 	<script type="text/javascript" src="gameobject.js"></script>
+	<script type="text/javascript" src="creep.js"></script>
 	<script type="text/javascript" src="tower.js"></script>
 	<script type="text/javascript" src="sample.js"></script>
 
@@ -49,10 +50,11 @@
 			var c = document.getElementById('canvas');
 			doResize();
 			var ctx = c.getContext('2d');
+			var bbgCtx = document.getElementById('bbg').getContext('2d');
 			var bgCtx = document.getElementById('bg').getContext('2d');
 			var mgCtx = document.getElementById('mg').getContext('2d');
 
-			var grid = new Grid(bgCtx, ctx);
+			var grid = new Grid(bbgCtx, ctx);
 			var path = [];
 
 			var creeps = [];
@@ -60,9 +62,9 @@
 			var gameObjects = [];
 
 
-			sounds.bullet = new Sample(new Audio("plop.wav"), {channels: 5});
-
-
+			sounds.bullet = new Sample(new Audio("plop.wav"), {channels: 3});
+			sounds.cheer = new Sample(new Audio("cheer.wav"), {channels: 3});
+			sounds.death = new Sample(new Audio("death.wav"), {channels: 3});
 
 			function doResize() {
 				var c = document.getElementById('canvas');
@@ -70,6 +72,8 @@
 				var wh = (window.innerHeight || document.body.clientHeight) - 50;
 				c.width =  (ww > wh ? wh : ww);
 				c.height = c.width;
+				document.getElementById('bbg').width = c.width;
+				document.getElementById('bbg').height = c.height;
 				document.getElementById('bg').width = c.width;
 				document.getElementById('bg').height = c.height;
 				document.getElementById('mg').width = c.width;
@@ -83,12 +87,20 @@
 			window.onresize = doResize;
 
 
-			for(var i = 0; i < 20; ++i) {
-				var creep = new GameObject(sprites.creep, mgCtx, {x: -(5*i) * settings.scaleFactor, y: 75 / settings.scaleFactor, zIndex: 1, speed: 0.3});
+			for(var i = 0; i < 10; ++i) {
+				var creep = new Creep(sprites.creep, mgCtx, grid, {x: -(i), y: 15, zIndex: 1, speed: 0.3});
 				creeps.push(creep);
 				gameObjects.push(creep);
-				creep.getPathTo(grid, {x: 31, y: 15});				
+				creep.setTarget({x: 31, y: 15});
 			}
+
+			for(var i = 0; i < 10; ++i) {
+				var creep = new Creep(sprites.creep, mgCtx, grid, {x: 15, y: -(i), zIndex: 1, speed: 0.3});
+				creeps.push(creep);
+				gameObjects.push(creep);
+				creep.setTarget({x: 15, y: 31});
+			}
+
 
 			var target = {x : 0, y : 0};
 			var blockNewPlacement = false;
@@ -103,7 +115,7 @@
 						creeps: creeps,
 						onSuccess: function() { 
 							towers.push(pelletTower);
-							gameObjects.push(pelletTower.getGameObject());
+							gameObjects.push(pelletTower);
 							gameObjects.push(pelletTower.getBullet());
 							for(var i in creeps) {
 								creeps[i].setPath(creeps[i].getNewPath());
@@ -134,13 +146,16 @@
 					towers[i].shootAtFirstWithinRange(creeps); 
 				}
 				for(var i in creeps) {
-					if(creeps[i].followPath()) {
+					if(creeps[i].isDead()) {
 						creeps.splice(i, 1);
-						shinyMessage(creeps.length + " creeps left");
+						shinyMessage(creeps.length + " creeps left")
+					} else if(creeps[i].followPath()) {
+						creeps[i].win();
+						creeps.splice(i, 1);
+						shinyMessage(creeps.length + " creeps left")
 					}
 				}
 			}
-
 
 			var redrawList = [];
 			function pushUpdatesToCanvas() {
@@ -195,11 +210,13 @@
 <body>
 <a href="http://github.com/renevanderark/canvas-td">back to github</a>
 <span id="msg"></span>
-<canvas id="bg" style="border: 1px solid; margin: 0; position: absolute; z-index: 0; left: 0; top: 30">
+<canvas id="bbg" style="border: 1px solid; margin: 0; position: absolute; z-index: 0; left: 0; top: 30">
 </canvas>
-<canvas id="mg" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 30">
+<canvas id="bg" style="border: 1px solid; margin: 0; position: absolute; z-index: 1; left: 0; top: 30">
 </canvas>
-<canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 2; left: 0; top: 30">
+<canvas id="mg" style="border: 1px solid; margin: 0; position: absolute; z-index: 2; left: 0; top: 30">
+</canvas>
+<canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 3; left: 0; top: 30">
 </canvas>
 
 
