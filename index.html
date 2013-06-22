@@ -56,10 +56,10 @@
 			var mgCtx = document.getElementById('mg').getContext('2d');
 
 			var grid = new Grid(bbgCtx, ctx);
-			grid.occupy({x: 0, y: 0, w: 14, h: 1});
-			grid.occupy({x: 16, y: 0, w: 15, h: 1});
-			grid.occupy({x: 0, y: 30, w: 14, h: 1});
-			grid.occupy({x: 16, y: 30, w: 15, h: 1});
+			grid.occupy({x: 0, y: -1, w: 14, h: 2});
+			grid.occupy({x: 16, y: -1, w: 15, h: 2});
+			grid.occupy({x: 0, y: 30, w: 14, h: 2});
+			grid.occupy({x: 16, y: 30, w: 15, h: 2});
 			
 			grid.occupy({y: 0, x: 0, h: 14, w: 1});
 			grid.occupy({y: 16, x: 0, h: 15, w: 1});
