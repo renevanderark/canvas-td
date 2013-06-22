@@ -52,13 +52,17 @@ var Grid = function(ctx, fgCtx, options) {
 		}
 	};
 
-	this.drawGhost = function() { 
+	this.over = function(gameobjects) {
+		for(var i in gameobjects) {
+			if(gameobjects[i].getX() / 10 == ghost.x && gameobjects[i].getY() / 10 == ghost.y) { return i; }
+		}
+		return -1;
+	};
+
+	this.drawGhost = function(sprite) { 
 		if(ghost.x > -1 && ghost.y > -1) {
-			fgCtx.fillStyle = "rgba(128,128,128,0.3)";	
-			fgCtx.fillRect(ghost.x * 10 / settings.scaleFactor, 
-				ghost.y * 10 / settings.scaleFactor, 
-				ghost.w * 10 / settings.scaleFactor,
-				ghost.h * 10 / settings.scaleFactor);
+			fgCtx.fillStyle = "rgba(128,128,128,0.3)";
+			sprite.draw(fgCtx, ghost.x * 10, ghost.y * 10);
 
 			clearGhostRect = { 
 				x: Math.ceil(ghost.x * 10 / settings.scaleFactor) - 1, 

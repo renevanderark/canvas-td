@@ -53,7 +53,7 @@ var Sprite = function(svg, w, h, scaleFactor) {
 	};
 
 	this.draw = function(ctx, x, y, angF) {
-		var ang = parseInt(angF);
+		var ang = parseInt(angF || 0);
 		if(ang < 0) { ang = 360 + ang; }
 		ctx.drawImage(canvasArray[ang], 
 			Math.floor(x / settings.scaleFactor), 

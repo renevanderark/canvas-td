@@ -73,6 +73,7 @@
 			var bullets = [];
 			var currentLevel = 1;
 			var currentLives = 20;
+			var moneyz = 50;
 
 
 			sounds.bullet = new Sample(new Audio("plop.wav"), {channels: 5});
@@ -105,16 +106,22 @@
 					shinyMessage("still validating last placement");
 				} else {
 					var pelletTower = new PelletTower({bulletContext: bgCtx, context: mgCtx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
+					if(moneyz < pelletTower.getCost()) { 
+						shinyMessage("not enough $");
+						return; 
+					}
 					blockNewPlacement = true;
 					pelletTower.place({
 						creeps: creeps,
 						onSuccess: function() { 
+							moneyz -= pelletTower.getCost();
 							towers.push(pelletTower);
 							bullets.push(pelletTower.getBullet());
 							for(var i in creeps) {
 								creeps[i].setPath(creeps[i].getNewPath());
 							}
 							blockNewPlacement = false;
+							document.getElementById("moneyz").innerHTML = moneyz;
 						},
 						onFailure: function(reason) {
 							shinyMessage(reason);
@@ -141,8 +148,11 @@
 				}
 				for(var i in creeps) {
 					if(creeps[i].isDead()) {
+						moneyz += creeps[i].getValue();
 						creeps.splice(i, 1);
 						document.getElementById("creepcount").innerHTML = creeps.length;
+						document.getElementById("moneyz").innerHTML = moneyz;
+						
 					} else if(creeps[i].followPath()) {
 						currentLives--;
 						creeps[i].win();
@@ -154,8 +164,13 @@
 			}
 
 			function processTick() {
-				grid.clearGhost();
-				grid.drawGhost();
+				var overTower = grid.over(towers);
+				if(overTower > -1) {
+					towers[overTower].highlight();
+				} else {
+					grid.clearGhost();
+					grid.drawGhost(sprites.pelletTower);
+				}
 
 				
 				processActionQueue();
@@ -181,14 +196,19 @@
 				requestAnimFrame(processTick);
 			}
 
+			function startTheCreeps() {
+				for(var i in creeps) { creeps[i].start(); }
+			}
+
 			function initCreeps() {
 				for(var i = 0; i < 10; ++i) {
 					var creep = new Creep(sprites.creep, mgCtx, grid, {
-						x: -i,
+						x: -i - 1,
 						y: 15,
 						zIndex: 1,
-						speed: 0.3,
-						hitpoints: currentLevel * 5
+						speed: 0.3 + (currentLevel * 0.1),
+						hitpoints: currentLevel * 5,
+						value: 2
 					});
 					creeps.push(creep);
 					creep.setTarget({x: 31, y: 15});
@@ -197,11 +217,11 @@
 				for(var i = 0; i < 10; ++i) {
 					var creep = new Creep(sprites.creep, mgCtx, grid, {
 						x: 15,
-						y: -i,
+						y: -i - 1,
 						zIndex: 1,
-						speed: 0.3,
-						hitpoints: currentLevel * 3,
-						value: 5
+						speed: 0.3 + (currentLevel * 0.1),
+						hitpoints: currentLevel * 5,
+						value: 2
 					});
 					creeps.push(creep);
 					creep.setTarget({x: 15, y: 31});
@@ -223,6 +243,7 @@
 					creeps[i].setPath(creeps[i].getNewPath());
 				}
 				processTick();
+				setTimeout(startTheCreeps, 5000);
 			}
 			initCreeps();
 		};
@@ -244,7 +265,7 @@ $: <span id="moneyz"></span>
 </canvas>
 <canvas id="mg" style="border: 1px solid; margin: 0; position: absolute; z-index: 2; left: 0; top: 30">
 </canvas>
-<canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 3; left: 0; top: 30">
+<canvas id="canvas" style="border: 1px solid; margin: 0; position: absolute; z-index: 3; left: 0; top: 30; opacity: 0.3; ">
 </canvas>
 <span id="msg"></span>
 </html>

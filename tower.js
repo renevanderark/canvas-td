@@ -20,6 +20,7 @@ var PelletTower = function(opts) {
 	var level = 1;
 	var range = 30;
 	var damage = 1;
+	var cost = 10;
 	var maxBullets = 1;
 	var ctx = opts.context;
 	var bulletCtx = opts.bulletContext;
@@ -34,6 +35,7 @@ var PelletTower = function(opts) {
 	var currentTarget = false;
 
 	this.getBullet = function() { return bullet; }
+	this.getCost = function() { return cost; }
 
 	var _pollPaths = function(creeps, onFailure, onSuccess) {
 
@@ -96,6 +98,8 @@ var PelletTower = function(opts) {
 		}
 		return false;
 	};
+
+	this.highlight = function() { console.log("highlight"); };
 
 	this.shootAtFirstWithinRange = function(creeps) {
 		if(currentTarget) { 

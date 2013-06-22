@@ -21,7 +21,9 @@ var Creep = function(sprite, ctx, grid, options) {
 	var _target = {x:-1,y:-1}
 	var _hasWon = false;
 	var _isDead = false;
+	var _mayStart = false;
 	var _hitpoints = opts.hitpoints || 5;
+	var _value = opts.value || 2;
 	opts.x = dimz.x;
 	opts.y = dimz.y;
 
@@ -35,18 +37,28 @@ var Creep = function(sprite, ctx, grid, options) {
 	};
 
 	this.isDead = function() { return _isDead; };
+	this.getValue = function() { return _value; };
 
 	this.takeDamage = function(damage) {
 		_hitpoints -= damage;
 		if(_hitpoints <= 0) { _die(); }
 	};
 
+	this.followPath = function() {
+		if(_mayStart) {
+			return parent.followPath();
+		}
+		return false;
+	};
+
+	this.start = function() { _mayStart = true; }
+
 	this.setTarget = function(target) { 
 		_target = target; 
 		this.getPathToTarget();
 	};
 
-	this.getPathToTarget = function() { 
+	this.getPathToTarget = function() {
 		this.getPathTo(grid, _target); 
 	};
 
