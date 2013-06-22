@@ -26,8 +26,11 @@ var Grid = function(ctx, fgCtx, options) {
 	var astarWorker = new Worker('astarWorker.js');
 
 	this.setGhost = function(dims) {
-		if(dims.x >= width - 3) { dims.x = width - 3; }
-		if(dims.y >= height - 3) { dims.y = height - 3; }
+		if(dims.x <= 0) { dims.x = 1; }
+		if(dims.y <= 0) { dims.y = 1; }
+
+		if(dims.x >= width - 4) { dims.x = width - 4; }
+		if(dims.y >= height - 4) { dims.y = height - 4; }
 		ghost.x = dims.x;
 		ghost.y = dims.y;
 		ghost.w = dims.w || ghost.w;
