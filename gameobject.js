@@ -107,13 +107,18 @@ var GameObject = function(sprite, ctx, options) {
 		var deltaY = targetY - y;
 		var mag = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
 		ang = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
+		if(!ang && ang !== 0) { console.log(ang, x,y,targetX, targetY, deltaX, deltaY); }
 		var nextX = x + ((deltaX / mag) * speed);
 		var nextY = y + ((deltaY / mag) * speed);
 		if(nextX - targetX > -1 && nextX - targetX < 1 && nextY - targetY > -1 && nextY - targetY < 1) {
-			x = targetX; y = targetY;
+			x = targetX; 
+			y = targetY;
 			return true;
 		}
-		x = nextX; y = nextY;
+		if(!isNaN(nextX) && !isNaN(nextY)) {
+			x = nextX; y = nextY;
+		}
+		
 		return false;
 	};
 

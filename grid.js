@@ -104,6 +104,7 @@ var Grid = function(ctx, fgCtx, options) {
 				occupiedSquares[x + "-" + y] = true;
 			}
 		}
+		this.drawOccupied();
 	};
 
 	this.deOccupy = function(spaces) {
@@ -117,6 +118,7 @@ var Grid = function(ctx, fgCtx, options) {
 					Math.ceil(10 / settings.scaleFactor) + 2);	
 			}
 		}
+		this.drawOccupied();
 	};
 
 	this.available = function(spaces) {
