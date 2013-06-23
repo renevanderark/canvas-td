@@ -101,7 +101,7 @@ function aStar(msg) {
 }
 
 self.addEventListener('message', function(msg) {	
-		var startTime = new Date().getTime();	
+	var startTime = new Date().getTime();	
 	self.postMessage({
 		path: aStar(msg),
 		timed: (new Date().getTime() - startTime),

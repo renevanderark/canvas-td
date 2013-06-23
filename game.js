@@ -47,13 +47,13 @@ window.onload = function() {
 	var grid = new Grid(bbgCtx, ctx);
 	grid.occupy({x: 0, y: -1, w: 14, h: 2});
 	grid.occupy({x: 16, y: -1, w: 15, h: 2});
-	grid.occupy({x: 0, y: 30, w: 14, h: 2});
-	grid.occupy({x: 16, y: 30, w: 15, h: 2});
+	grid.occupy({x: 0, y: 30, w: 14, h: 3});
+	grid.occupy({x: 16, y: 30, w: 15, h: 3});
 	
-	grid.occupy({y: 0, x: 0, h: 14, w: 1});
-	grid.occupy({y: 16, x: 0, h: 15, w: 1});
-	grid.occupy({y: 0, x: 30, h: 14, w: 1});
-	grid.occupy({y: 16, x: 30, h: 15, w: 1});
+	grid.occupy({y: 0, x: -1, h: 14, w: 2});
+	grid.occupy({y: 16, x: -1, h: 15, w: 2});
+	grid.occupy({y: 0, x: 30, h: 14, w: 3});
+	grid.occupy({y: 16, x: 30, h: 15, w: 3});
 
 	var path = [];
 
@@ -101,34 +101,45 @@ window.onload = function() {
 
 	var target = {x : 0, y : 0};
 	var blockNewPlacement = false;
+
+
 	document.getElementById("canvas").onclick = function(e) {
-		if(blockNewPlacement) {
-			shinyMessage("still validating last placement");
-		} else {
-			var pelletTower = new PelletTower({bulletContext: bgCtx, context: mgCtx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
-			if(moneyz < pelletTower.getCost()) { 
-				shinyMessage("not enough $");
-				return; 
-			}
-			blockNewPlacement = true;
-			pelletTower.place({
-				creeps: creeps,
-				onSuccess: function() { 
-					moneyz -= pelletTower.getCost();
-					towers.push(pelletTower);
-					bullets.push(pelletTower.getBullet());
-					for(var i in creeps) {
-						creeps[i].setPath(creeps[i].getNewPath());
-					}
-					blockNewPlacement = false;
-					document.getElementById("moneyz").innerHTML = moneyz;
-				},
-				onFailure: function(reason) {
-					shinyMessage(reason);
-					blockNewPlacement = false;
+		function placeTower() {
+			if(blockNewPlacement) {
+				shinyMessage("still validating last placement");
+			} else {
+				var pelletTower = new PelletTower({bulletContext: bgCtx, context: mgCtx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
+				if(moneyz < pelletTower.getCost()) { 
+					shinyMessage("not enough $");
+					return; 
 				}
-			});
+				blockNewPlacement = true;
+				pelletTower.place({
+					creeps: creeps,
+					onSuccess: function() { 
+						moneyz -= pelletTower.getCost();
+						towers.push(pelletTower);
+						bullets.push(pelletTower.getBullet());
+						for(var i in creeps) {
+							creeps[i].setPath(creeps[i].getNewPath());
+						}
+						blockNewPlacement = false;
+						document.getElementById("moneyz").innerHTML = moneyz;
+					},
+					onFailure: function(reason) {
+						shinyMessage(reason);
+						blockNewPlacement = false;
+					}
+				});
+			}
 		}
+
+		function showInfo(gameObject) {
+		}
+
+		var overTower = grid.over(towers);
+		if(overTower > -1) { showInfo(towers[overTower]); }
+		else { placeTower(); }
 	};
 
 	document.getElementById("canvas").onmouseout = function(e) {
@@ -252,7 +263,7 @@ window.onload = function() {
 			creeps[i].setPath(creeps[i].getNewPath());
 		}
 		processTick();
-		setTimeout(startTheCreeps, 5000);
+		setTimeout(startTheCreeps, 3000);
 	}
 	initCreeps();
 	function shinyMessage(txt) {
