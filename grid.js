@@ -54,7 +54,11 @@ var Grid = function(ctx, fgCtx, options) {
 
 	this.over = function(gameobjects) {
 		for(var i in gameobjects) {
-			if(gameobjects[i].getX() / 10 == ghost.x && gameobjects[i].getY() / 10 == ghost.y) { return i; }
+			if(
+				gameobjects[i].getX() / 10 <= ghost.x+1 && 
+				gameobjects[i].getY() / 10 <= ghost.y+1 &&
+				gameobjects[i].getX() / 10 + gameobjects[i].getW() / 10 >= ghost.x+1 &&
+				gameobjects[i].getY() / 10 + gameobjects[i].getH() / 10 >= ghost.y+1) { return i; }
 		}
 		return -1;
 	};
@@ -74,13 +78,13 @@ var Grid = function(ctx, fgCtx, options) {
 	};
 
 	this.drawOccupied = function() {
-		ctx.strokeStyle = "#f00";
+		ctx.fillStyle = "#aaa";
 		ctx.beginPath();
 
 		for(var x = 0; x < width; x++) {
 			for(var y = 0; y < height; y++) {
 				if(occupiedSquares[x + "-" + y] == true) {
-					ctx.rect(
+					ctx.fillRect(
 						x * 10 / settings.scaleFactor, 
 						y * 10 / settings.scaleFactor, 
 						10 / settings.scaleFactor,
@@ -139,7 +143,7 @@ var Grid = function(ctx, fgCtx, options) {
 
 	var pathSubjects = [];
 	astarWorker.addEventListener('message', function(msg) {
-		//console.log("A*: " + msg.data.timed + "ms");
+//		console.log("A*: " + msg.data.timed + "ms");
 		pathSubjects[msg.data.subjectKey].handlePath(msg.data.path, msg.data.requestTimeIndex);
 	}, false);
 

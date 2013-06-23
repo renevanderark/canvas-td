@@ -99,7 +99,7 @@ var PelletTower = function(opts) {
 		return false;
 	};
 
-	this.highlight = function() { console.log("highlight"); };
+	this.highlight = function() { return "pelletTower"; };
 
 	this.shootAtFirstWithinRange = function(creeps) {
 		if(currentTarget) { 

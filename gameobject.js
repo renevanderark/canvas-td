@@ -65,6 +65,9 @@ var GameObject = function(sprite, ctx, options) {
 
 	this.getX = function() { return x; };
 	this.getY = function() { return y; };
+	this.getW = function() { return sprite.getW(); };
+	this.getH = function() { return sprite.getH(); };
+
 	this.getZ = function() { return z; };
 	
 	this.setX = function(setX) { x = setX; };

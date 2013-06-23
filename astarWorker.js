@@ -59,20 +59,20 @@ function aStar(msg) {
       var right = { x : pos.x + 1, y : pos.y, parent : pos, gScore : 10 };
       var up = { x : pos.x, y : pos.y - 1, parent : pos, gScore : 10 };
       var down = { x : pos.x, y : pos.y + 1, parent : pos, gScore : 10 };
-      var tl = { x : pos.x - 1, y : pos.y - 1, parent : pos, gScore : 14 };
+/*      var tl = { x : pos.x - 1, y : pos.y - 1, parent : pos, gScore : 14 };
       var tr = { x : pos.x + 1, y : pos.y - 1, parent : pos, gScore : 14 };
       var bl = { x : pos.x - 1, y : pos.y + 1, parent : pos, gScore : 14 };
-      var br = { x : pos.x + 1, y : pos.y + 1, parent : pos, gScore : 14 };
+      var br = { x : pos.x + 1, y : pos.y + 1, parent : pos, gScore : 14 };*/
 
       if(left.x > -1 && available(left)) { insert(left); }
       if(right.x < width && available(right)) { insert(right); }
       if(up.y > -1 && available(up)) { insert(up); }
       if(down.y < height && available(down)) {  insert(down); }
 
-      if(tl.x > -1 && tl.y > -1 && available(tl)) { insert(tl); }
+/*      if(tl.x > -1 && tl.y > -1 && available(tl)) { insert(tl); }
       if(tr.x < width && tr.y > -1 && available(tr)) { insert(tr); }
       if(bl.x > -1 && bl.y < height && available(bl)) { insert(bl); }
-      if(br.x < width && br.y < height && available(br)) { insert(br); }
+      if(br.x < width && br.y < height && available(br)) { insert(br); }*/
   }
 
   if(occupiedSquares[to.x + "-" + to.y]) { return []; }
