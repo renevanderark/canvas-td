@@ -98,7 +98,6 @@ window.onload = function() {
 		for(var i in creeps) { creeps[i].setUpdated(true); }
 		if(grid) { grid.drawOccupied(); }
 	}
-	window.onresize = doResize;
 
 	var target = {x : 0, y : 0};
 	var blockNewPlacement = false;
@@ -138,8 +137,8 @@ window.onload = function() {
 
 	document.getElementById("canvas").onmousemove = function(e) {
 		grid.setGhost({
-			x : Math.floor(((e.pageX - this.offsetLeft) * settings.scaleFactor) / 10),
-			y : Math.floor(((e.pageY - this.offsetTop) * settings.scaleFactor) / 10)
+			x : Math.floor(((e.pageX - this.offsetLeft- 5) * settings.scaleFactor) / 10),
+			y : Math.floor(((e.pageY - this.offsetTop - 5) * settings.scaleFactor) / 10)
 		});
 	};
 
@@ -199,13 +198,19 @@ window.onload = function() {
 	}
 
 	function startTheCreeps() {
-		for(var i in creeps) { creeps[i].start(); }
+		for(var i in creeps) {
+			if(!creeps[i].wasStarted()) {
+				creeps[i].start();
+				setTimeout(startTheCreeps, 200);
+				return;
+			}
+		}
 	}
 
 	function initCreeps() {
 		for(var i = 0; i < 10; ++i) {
 			var creep = new Creep(sprites.creep, mgCtx, grid, {
-				x: -i - 1,
+				x: -1,
 				y: 15,
 				zIndex: 1,
 				speed: 0.3 + (currentLevel * 0.02),
@@ -217,7 +222,7 @@ window.onload = function() {
 
 			var creep = new Creep(sprites.creep, mgCtx, grid, {
 				x: 15,
-				y: -i - 1,
+				y: -1,
 				zIndex: 1,
 				speed: 0.3 + (currentLevel * 0.02),
 				hitpoints: currentLevel * 4,

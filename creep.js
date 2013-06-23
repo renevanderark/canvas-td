@@ -52,6 +52,7 @@ var Creep = function(sprite, ctx, grid, options) {
 	};
 
 	this.start = function() { _mayStart = true; }
+	this.wasStarted = function() { return _mayStart; }
 
 	this.setTarget = function(target) { 
 		_target = target; 
