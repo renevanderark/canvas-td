@@ -65,15 +65,15 @@ window.onload = function() {
 	var moneyz = 50;
 
 
-	if($.browser.msie) {
+/*	if($.browser.msie) {
 		sounds.bullet = new Sample(new Audio("plop.mp3"), {channels: 5});
 		sounds.cheer = new Sample(new Audio("cheer.mp3"), {channels: 3});
 		sounds.death = new Sample(new Audio("death.mp3"), {channels: 2});
-	} else {
+	} else {*/
 		sounds.bullet = new Sample(new Audio("plop.wav"), {channels: 5});
 		sounds.cheer = new Sample(new Audio("cheer.wav"), {channels: 3});
 		sounds.death = new Sample(new Audio("death.wav"), {channels: 2});
-	}
+//	}
 
 	function doResize() {
 		var c = document.getElementById('canvas');
