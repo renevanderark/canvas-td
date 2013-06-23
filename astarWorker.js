@@ -65,15 +65,17 @@ function aStar(msg) {
 		var bl = { x : pos.x - 1, y : pos.y + 1, parent : pos, gScore : 14 };
 		var br = { x : pos.x + 1, y : pos.y + 1, parent : pos, gScore : 14 };
 
+		if(available(tl) && (available(up) || available(left))) { insert(tl); }
+		if(available(tr) && (available(up) || available(right))) { insert(tr); }
+		if(available(bl) && (available(down) || available(left))) { insert(bl); }
+		if(available(br) && (available(down) || available(right))) { insert(br); }
+
+
 		if(available(left)) { insert(left); }
 		if(available(right)) { insert(right); }
 		if(available(up)) { insert(up); }
 		if(available(down)) { insert(down); }
 
-		if(available(tl)) { insert(tl); }
-		if(available(tr)) { insert(tr); }
-		if(available(bl)) { insert(bl); }
-		if(available(br)) { insert(br); }
 	}
 
 	if(occupiedSquares[to.x + "-" + to.y]) { return []; }
