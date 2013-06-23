@@ -22,7 +22,7 @@ function aStar(msg) {
 	var width = msg.data.width;
 	var height = msg.data.height;
 
-	var openList = [from];
+	var openList = [{x: from.x, y: from.y, gScore: 0}];
 	var closedList = [];
 	var openLookup = {};
 	var closedLookup = {};
@@ -56,14 +56,14 @@ function aStar(msg) {
 	}
 
 	function getAdjacent(pos) {
-		var left = { x : pos.x - 1, y : pos.y, parent : pos, gScore : 10 };
-		var right = { x : pos.x + 1, y : pos.y, parent : pos, gScore : 10 };
-		var up = { x : pos.x, y : pos.y - 1, parent : pos, gScore : 10 };
-		var down = { x : pos.x, y : pos.y + 1, parent : pos, gScore : 10 };
-		var tl = { x : pos.x - 1, y : pos.y - 1, parent : pos, gScore : 14 };
-		var tr = { x : pos.x + 1, y : pos.y - 1, parent : pos, gScore : 14 };
-		var bl = { x : pos.x - 1, y : pos.y + 1, parent : pos, gScore : 14 };
-		var br = { x : pos.x + 1, y : pos.y + 1, parent : pos, gScore : 14 };
+		var left = { x : pos.x - 1, y : pos.y, parent : pos, gScore : pos.gScore + 10 };
+		var right = { x : pos.x + 1, y : pos.y, parent : pos, gScore : pos.gScore + 10 };
+		var up = { x : pos.x, y : pos.y - 1, parent : pos, gScore : pos.gScore + 10 };
+		var down = { x : pos.x, y : pos.y + 1, parent : pos, gScore : pos.gScore + 10 };
+		var tl = { x : pos.x - 1, y : pos.y - 1, parent : pos, gScore : pos.gScore + 14 };
+		var tr = { x : pos.x + 1, y : pos.y - 1, parent : pos, gScore : pos.gScore + 14 };
+		var bl = { x : pos.x - 1, y : pos.y + 1, parent : pos, gScore : pos.gScore + 14 };
+		var br = { x : pos.x + 1, y : pos.y + 1, parent : pos, gScore : pos.gScore + 14 };
 
 		if(available(tl) && (available(up) || available(left))) { insert(tl); }
 		if(available(tr) && (available(up) || available(right))) { insert(tr); }
