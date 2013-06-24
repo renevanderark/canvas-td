@@ -104,13 +104,19 @@ var GameObject = function(sprite, ctx, options) {
 		return false;
 	};
 
+	this.getStats = function() {
+		return {
+			text: "generic game object",
+			shapes: []
+		};
+	};
+
 	this.moveTo = function(targetX, targetY) {
 		updated = true;
 		var deltaX = targetX - x;
 		var deltaY = targetY - y;
 		var mag = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
 		ang = Math.atan2(deltaY, deltaX) * (180 / Math.PI) + 90;
-		if(!ang && ang !== 0) { console.log(ang, x,y,targetX, targetY, deltaX, deltaY); }
 		var nextX = x + ((deltaX / mag) * speed);
 		var nextY = y + ((deltaY / mag) * speed);
 		if(nextX - targetX > -1 && nextX - targetX < 1 && nextY - targetY > -1 && nextY - targetY < 1) {

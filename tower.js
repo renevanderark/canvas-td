@@ -18,7 +18,7 @@
 
 var PelletTower = function(opts) {
 	var level = 1;
-	var range = 30;
+	var range = 20;
 	var damage = 1;
 	var cost = 10;
 	var maxBullets = 1;
@@ -99,7 +99,13 @@ var PelletTower = function(opts) {
 		return false;
 	};
 
-	this.highlight = function() { return "pelletTower"; };
+	this.getStats = function() {
+		var realRange = range / settings.scaleFactor;
+		return {
+			text: "Pellet tower level: " + level + ", range: " + range,
+			shape: {type: "circle", radius: realRange, pos: {x: this.getX() / settings.scaleFactor, y:this.getY() / settings.scaleFactor}}
+		};
+	};
 
 	this.shootAtFirstWithinRange = function(creeps) {
 		if(currentTarget) { 

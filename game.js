@@ -37,6 +37,7 @@ var sprites = {
 window.onload = function() {
 
 	var c = document.getElementById('canvas');
+	var activeShape = false;
 	doResize();
 	var ctx = c.getContext('2d');
 	var bbgCtx = document.getElementById('bbg').getContext('2d');
@@ -87,7 +88,7 @@ window.onload = function() {
 		document.getElementById('bg').height = c.height;
 		document.getElementById('mg').width = c.width;
 		document.getElementById('mg').height = c.height;
-		document.getElementById('text').width = c.width;
+		document.getElementById('text').width = c.width * 2;
 		document.getElementById('text').height = c.height;
 		settings.scaleFactor = 310 / c.width;
 		sprites.creep.init(8,8);
@@ -135,6 +136,10 @@ window.onload = function() {
 		}
 
 		function showInfo(gameObject) {
+			var stats = gameObject.getStats();
+			shinyMessage(stats.text);
+			if(stats.shape) { activeShape = stats.shape; }
+			else { activeShape = false; }
 		}
 
 		var overTower = grid.over(towers);
@@ -197,8 +202,12 @@ window.onload = function() {
 		} else {
 			grid.drawGhost(sprites.pelletTower);
 		}
+		if(activeShape) {
+/*			ctx.beginPath();
+			ctx.arc(activeShape.pos.x, activeShape.pos.y, activeShape.radius, 0, 2 * Math.PI, false);
+			ctx.stroke();*/
+		}
 
-		
 		processActionQueue();
 		if(creeps.length == 0) {
 			currentLevel++;
