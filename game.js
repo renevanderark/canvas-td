@@ -174,6 +174,20 @@ window.onload = function() {
 		}
 	}
 
+	function clearObjects(gameObjects) {
+		var i = gameObjects.length;
+		while(i--) {
+			if(gameObjects[i] && gameObjects[i].isUpdated()) { gameObjects[i].clear(); }
+		}
+	}
+	
+	function drawObjects(gameObjects) {
+		var i = gameObjects.length;
+		while(i--) {
+			if(gameObjects[i] && gameObjects[i].isUpdated()) { gameObjects[i].draw(); }
+		}
+	}
+
 	function processTick() {
 		var overTower = grid.over(towers);
 		grid.clearGhost();
@@ -196,13 +210,12 @@ window.onload = function() {
 			return;
 		}
 
-		for(var i in towers) { if(towers[i] && towers[i].isUpdated()) { towers[i].clear(); } }
-		for(var i in bullets) { if(bullets[i] && bullets[i].isUpdated()) { bullets[i].clear(); } }
-		for(var i in creeps) { if(creeps[i] && creeps[i].isUpdated()) { creeps[i].clear(); } }
-
-		for(var i in towers) { if(towers[i] && towers[i].isUpdated()) { towers[i].draw(); } }
-		for(var i in bullets) { if(bullets[i] && bullets[i].isUpdated()) { bullets[i].draw(); } }
-		for(var i in creeps) { if(creeps[i] && creeps[i].isUpdated()) { creeps[i].draw(); } }
+		clearObjects(towers);
+		clearObjects(bullets);
+		clearObjects(creeps);
+		drawObjects(towers);
+		drawObjects(bullets);
+		drawObjects(creeps);
 
 
 		requestAnimFrame(processTick);

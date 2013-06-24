@@ -53,7 +53,8 @@ var Grid = function(ctx, fgCtx, options) {
 	};
 
 	this.over = function(gameobjects) {
-		for(var i in gameobjects) {
+		var i = gameobjects.length;
+		while(i--) {
 			if(
 				gameobjects[i].getX() / 10 <= ghost.x+1 && 
 				gameobjects[i].getY() / 10 <= ghost.y+1 &&

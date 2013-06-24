@@ -43,7 +43,8 @@ function aStar(msg) {
 	function insert(pos) {
 		openLookup[pos.x + "-" + pos.y] = true;
 		getScore(pos);
-		for(var i = 0; i < openList.length; i++) {
+		var l = openList.length;
+		for(var i = 0; i < l; i++) {
 			if(openList[i].score >= pos.score) {
 				openList.splice(i, 0, pos);
 				return;
