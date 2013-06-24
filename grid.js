@@ -143,7 +143,7 @@ var Grid = function(ctx, fgCtx, options) {
 
 	var pathSubjects = [];
 	astarWorker.addEventListener('message', function(msg) {
-//		console.log("A*: " + msg.data.timed + "ms");
+		console.log("A*: " + msg.data.timed + "ms");
 		pathSubjects[msg.data.subjectKey].handlePath(msg.data.path, msg.data.requestTimeIndex);
 	}, false);
 

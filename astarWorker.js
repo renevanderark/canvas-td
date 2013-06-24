@@ -28,11 +28,8 @@ function aStar(msg) {
 	var closedLookup = {};
 
 	function available(pos) {
-		return (
-			(occupiedSquares[pos.x + "-" + pos.y] == null || occupiedSquares[pos.x + "-" + pos.y] === false) &&
-			(closedLookup[pos.x + "-" + pos.y] == null || closedLookup[pos.x + "-" + pos.y] === false) &&
-			(openLookup[pos.x + "-" + pos.y] == null || openLookup[pos.x + "-" + pos.y] === false) &&
-			(pos.x > -1 && pos.y > -1 && pos.x < width+1&& pos.y < height+1));
+		var key = pos.x + "-" + pos.y;
+		return (!occupiedSquares[key] && !closedLookup[key] && !openLookup[key] && (pos.x > -1 && pos.y > -1 && pos.x < width + 1 && pos.y < height + 1));
 	}
 
 	function getScore(pos) {
@@ -46,7 +43,7 @@ function aStar(msg) {
 	function insert(pos) {
 		openLookup[pos.x + "-" + pos.y] = true;
 		getScore(pos);
-		for(var i in openList) {
+		for(var i = 0; i < openList.length; i++) {
 			if(openList[i].score >= pos.score) {
 				openList.splice(i, 0, pos);
 				return;
