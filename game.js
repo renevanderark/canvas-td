@@ -66,15 +66,15 @@ window.onload = function() {
 	var moneyz = 50;
 
 
-	if($.browser.msie) {
+/*	if($.browser.msie) {
 		sounds.bullet = new Sample(new Audio("plop.mp3"), {channels: 5});
 		sounds.cheer = new Sample(new Audio("cheer.mp3"), {channels: 3});
 		sounds.death = new Sample(new Audio("death.mp3"), {channels: 2});
-	} else {
+	} else {*/
 		sounds.bullet = new Sample(new Audio("plop.wav"), {channels: 5});
 		sounds.cheer = new Sample(new Audio("cheer.wav"), {channels: 3});
 		sounds.death = new Sample(new Audio("death.wav"), {channels: 2});
-	}
+//	}
 
 	function doResize() {
 		var c = document.getElementById('canvas');
@@ -88,7 +88,7 @@ window.onload = function() {
 		document.getElementById('bg').height = c.height;
 		document.getElementById('mg').width = c.width;
 		document.getElementById('mg').height = c.height;
-		document.getElementById('text').width = c.width * 2;
+		document.getElementById('text').width = c.width +100;
 		document.getElementById('text').height = c.height;
 		settings.scaleFactor = 310 / c.width;
 		sprites.creep.init(8,8);
@@ -138,8 +138,14 @@ window.onload = function() {
 		function showInfo(gameObject) {
 			var stats = gameObject.getStats();
 			shinyMessage(stats.text);
-			if(stats.shape) { activeShape = stats.shape; }
-			else { activeShape = false; }
+			if(activeShape && activeShape.type == 'circle') {
+				ctx.clearRect(activeShape.pos.x - activeShape.radius, activeShape.pos.y - activeShape.radius, activeShape.radius * 2, activeShape.radius * 2);
+			}
+			if(stats.shape) {
+				activeShape = stats.shape; 
+			} else { 
+				activeShape = false; 
+			}
 		}
 
 		var overTower = grid.over(towers);
@@ -165,13 +171,28 @@ window.onload = function() {
 		for(var i in creeps) {
 			if(creeps[i].isDead()) {
 				moneyz += creeps[i].getValue();
+				shinyMessage("$+" + creeps[i].getValue(), {
+					timeout: 250,
+					fill: "#afa",
+					font: "bold 10px sans-serif",
+					shade: "#000",
+					shadeDistance: 1,
+					x: creeps[i].getX() / settings.scaleFactor,
+					y: creeps[i].getY() / settings.scaleFactor
+				});
 				creeps.splice(i, 1);
 				document.getElementById("creepcount").innerHTML = creeps.length;
 				document.getElementById("moneyz").innerHTML = moneyz;
-				
 			} else if(creeps[i].followPath()) {
 				currentLives--;
 				creeps[i].win();
+				shinyMessage("♥-1", {
+					timeout: 250,
+					font: "bold 10px sans-serif",
+					shade: "#000",
+					x: (creeps[i].getX() - 10) / settings.scaleFactor,
+					y: (creeps[i].getY() - 10) / settings.scaleFactor
+				});
 				creeps.splice(i, 1);
 				document.getElementById("creepcount").innerHTML = creeps.length;
 				document.getElementById("lives").innerHTML = currentLives;
@@ -202,10 +223,11 @@ window.onload = function() {
 		} else {
 			grid.drawGhost(sprites.pelletTower);
 		}
-		if(activeShape) {
-/*			ctx.beginPath();
+
+		if(activeShape && activeShape.type == "circle") {
+			ctx.beginPath();
 			ctx.arc(activeShape.pos.x, activeShape.pos.y, activeShape.radius, 0, 2 * Math.PI, false);
-			ctx.stroke();*/
+			ctx.fill();
 		}
 
 		processActionQueue();
@@ -215,7 +237,13 @@ window.onload = function() {
 			return;
 		}
 		if(currentLives <= 0) {
-			shinyMessage("Game over");
+			shinyMessage("Game over", {
+				x: ctx.canvas.width / 2 - 45, 
+				y: ctx.canvas.width / 2 - 15,
+				font: "bold 35px sans-serif",
+				shade: "#000",
+				timeout: 10000
+			});
 			return;
 		}
 
@@ -265,9 +293,14 @@ window.onload = function() {
 			creep.setTarget({x: 15, y: 31});
 		}
 
-		for(var i = 0; i < 10; ++i) {
-
-		}
+		shinyMessage("Level " + currentLevel, {
+			x: ctx.canvas.width / 2 - 45, 
+			y: ctx.canvas.width / 2 - 15,
+			font: "bold 35px sans-serif",
+			fill: "#8f8",
+			shade: "#000",
+			timeout: 1500
+		});
 		document.getElementById("level").innerHTML = currentLevel;
 		document.getElementById("creepcount").innerHTML = creeps.length;
 		document.getElementById("lives").innerHTML = currentLives;
@@ -285,18 +318,41 @@ window.onload = function() {
 			creeps[i].setPath(creeps[i].getNewPath());
 		}
 		processTick();
-		setTimeout(startTheCreeps, 3000);
-	}
-	initCreeps();
-	function shinyMessage(txt) {
-		txtCtx.font = "bold 12px sans-serif";
-		txtCtx.fillText(txt, (grid.getGhost().x * 10) / settings.scaleFactor, (grid.getGhost().y* 10) / settings.scaleFactor);
-		$("#text").fadeIn();
-		setTimeout(removeMessage, 500);
+		setTimeout(function() { countDown(3); }, 2000);
 	}
 
-	function removeMessage() {
-		$("#text").fadeOut({complete: function() {txtCtx.clearRect(0,0, txtCtx.canvas.width, txtCtx.canvas.height); }});
+	function countDown(secs) {
+		if(secs == 0) { startTheCreeps() }
+		else {
+			shinyMessage(secs, {
+				x: ctx.canvas.width / 2 - 15, 
+				y: ctx.canvas.width / 2 - 15,
+				font: "bold 35px sans-serif",
+				fill: "#8f8",
+				shade: "#000",
+				timeout: 1000
+			});
+			setTimeout(function() { countDown(secs-1); }, 1000);
+		}
+	}
+
+	initCreeps();
+	function shinyMessage(txt, options) {
+		var opts = options || {};
+		var x = opts.x || (grid.getGhost().x * 10) / settings.scaleFactor;
+		var y = opts.y || (grid.getGhost().y * 10) / settings.scaleFactor;
+
+		txtCtx.font = opts.font || "bold 12px sans-serif";
+		if(opts.shade) {
+			txtCtx.fillStyle = opts.shade;
+			txtCtx.fillText(txt, x + (opts.shadeDistance || 2), y + (opts.shadeDistance || 2));
+		}
+		txtCtx.fillStyle = opts.fill || "#a00";
+		txtCtx.fillText(txt, x, y);
+		var width = txtCtx.measureText(txt).width;
+		setTimeout(function() {
+			txtCtx.clearRect(x, y - 27, width + 5, 32);
+		}, opts.timeout || 500);
 	}
 };
 
