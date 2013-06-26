@@ -32,20 +32,23 @@ function aStar(msg) {
 		return (!occupiedSquares[key] && !closedLookup[key] && !openLookup[key] && (pos.x > -1 && pos.y > -1 && pos.x < width + 1 && pos.y < height + 1));
 	}
 
-	function getScore(pos) {
-		var deltaX = to.x - pos.x;
-		var deltaY = to.y - pos.y;
-		if(deltaX < 0) { deltaX = -deltaX; }
-		if(deltaY < 0) { deltaY = -deltaY; }
-		pos.score = pos.gScore + (deltaX * 10) + (deltaY * 10);
+	function getScores(pos) {
+		if(!pos.hScore) {
+			var deltaX = to.x - pos.x;
+			var deltaY = to.y - pos.y;
+			if(deltaX < 0) { deltaX = -deltaX; }
+			if(deltaY < 0) { deltaY = -deltaY; }
+			pos.hScore = (deltaX * 10) + (deltaY * 10);
+		}
+		pos.fScore = pos.gScore + pos.hScore;
 	}
 
 	function insert(pos) {
-		openLookup[pos.x + "-" + pos.y] = true;
-		getScore(pos);
+		openLookup[pos.x + "-" + pos.y] = pos;
+		getScores(pos);
 		var l = openList.length;
 		for(var i = 0; i < l; i++) {
-			if(openList[i].score >= pos.score) {
+			if(openList[i].fScore >= pos.fScore) {
 				openList.splice(i, 0, pos);
 				return;
 			}
@@ -54,14 +57,27 @@ function aStar(msg) {
 	}
 
 	function getAdjacent(pos) {
-		var left = { x : pos.x - 1, y : pos.y, parent : pos, gScore : pos.gScore + 10 };
-		var right = { x : pos.x + 1, y : pos.y, parent : pos, gScore : pos.gScore + 10 };
-		var up = { x : pos.x, y : pos.y - 1, parent : pos, gScore : pos.gScore + 10 };
-		var down = { x : pos.x, y : pos.y + 1, parent : pos, gScore : pos.gScore + 10 };
-		var tl = { x : pos.x - 1, y : pos.y - 1, parent : pos, gScore : pos.gScore + 14 };
-		var tr = { x : pos.x + 1, y : pos.y - 1, parent : pos, gScore : pos.gScore + 14 };
-		var bl = { x : pos.x - 1, y : pos.y + 1, parent : pos, gScore : pos.gScore + 14 };
-		var br = { x : pos.x + 1, y : pos.y + 1, parent : pos, gScore : pos.gScore + 14 };
+		var left = { x : pos.x - 1, y : pos.y, parent : pos, gScore : pos.gScore + 10};
+		var right = { x : pos.x + 1, y : pos.y, parent : pos, gScore : pos.gScore + 10};
+		var up = { x : pos.x, y : pos.y - 1, parent : pos, gScore : pos.gScore + 10};
+		var down = { x : pos.x, y : pos.y + 1, parent : pos, gScore : pos.gScore + 10};
+		var tl = { x : pos.x - 1, y : pos.y - 1, parent : pos, gScore : pos.gScore + 14};
+		var tr = { x : pos.x + 1, y : pos.y - 1, parent : pos, gScore : pos.gScore + 14};
+		var bl = { x : pos.x - 1, y : pos.y + 1, parent : pos, gScore : pos.gScore + 14};
+		var br = { x : pos.x + 1, y : pos.y + 1, parent : pos, gScore : pos.gScore + 14};
+
+		var ary = [left, right, up, down, tl, tr, bl, br];
+		var l = ary.length;
+		var resort = false;
+		while(l--) {
+			var k = ary[l].x + "-" + ary[l].y;
+			if(openLookup[k] && openLookup[k].gScore > ary[l].gScore) {
+				resort = true;
+				openLookup[k].parent = pos;
+				openLookup[k].gScore = ary[l].gScore;
+				getScores(openLookup[k]);
+			}
+		}
 
 		if(available(tl) && (available(up) || available(left))) { insert(tl); }
 		if(available(tr) && (available(up) || available(right))) { insert(tr); }
@@ -74,6 +90,7 @@ function aStar(msg) {
 		if(available(up)) { insert(up); }
 		if(available(down)) { insert(down); }
 
+		if(resort) { openList = openList.sort(function(a,b) { return a.fScore - b.fScore; }); }
 	}
 
 	if(occupiedSquares[to.x + "-" + to.y]) { return []; }
@@ -85,6 +102,7 @@ function aStar(msg) {
 		closedList.push(current);
 		closedLookup[current.x + "-" + current.y] = true;
 		getAdjacent(current);
+
 	}
 
 	if(openList.length == 0) { return []; }
@@ -98,7 +116,7 @@ function aStar(msg) {
 	return finalList.reverse();
 }
 
-self.addEventListener('message', function(msg) {	
+self.addEventListener('message', function(msg) {
 	var startTime = new Date().getTime();	
 	self.postMessage({
 		path: aStar(msg),
