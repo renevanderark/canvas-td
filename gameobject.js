@@ -135,6 +135,9 @@ var GameObject = function(sprite, ctx, options) {
 		return this.moveTo(otherObject.getX(), otherObject.getY());
 	};
 
+	this.setAngle = function(angle) { ang = angle; };
+	this.getAngle = function() { return ang; };
+
 	this.pointTo = function(otherObject) {
 		updated = true;
 		var deltaX = otherObject.getX() - x;

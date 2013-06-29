@@ -122,6 +122,7 @@ var PelletTower = function(opts) {
 		currentTarget = false;
 		bullet.setX(this.getX());
 		bullet.setY(this.getY());
+		bullet.setAngle(this.getAngle());
 		bullet.setUpdated(true);
 		return false;
 	};

@@ -30,8 +30,8 @@ var settings = { scaleFactor: 1.0 };
 var sounds = {};
 var sprites = {
 	creep: new Sprite("creep.svg", 8, 8),
-	pelletTower:  new Sprite("pellet.svg", 20, 20),
-	bullet: new Sprite("bullet.svg", 5,5)
+	pelletTower:  new Sprite("rocketlauncher.svg", 20, 20),
+	bullet: new Sprite("rocket.svg", 20,20)
 };
 
 window.onload = function() {
@@ -93,7 +93,7 @@ window.onload = function() {
 		settings.scaleFactor = 310 / c.width;
 		sprites.creep.init(8,8);
 		sprites.pelletTower.init(20,20);
-		sprites.bullet.init(4,4);
+		sprites.bullet.init(20,20);
 		for(var i in towers) { towers[i].setUpdated(true); }
 		for(var i in bullets) { bullets[i].setUpdated(true); }
 		for(var i in creeps) { creeps[i].setUpdated(true); }
