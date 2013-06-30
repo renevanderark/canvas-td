@@ -1,7 +1,21 @@
-img { 
+a > img { 
 	width: 20px;
 	height: 20px;
-	border: 1px solid #aaf;
+	border: 1px solid #55d;
 	border-radius: 4px;
 	background: linear-gradient(to bottom, #87e0fd 0%,#53cbf1 40%,#05abe0 100%);
+	box-shadow: 2px 2px 2px #888;
+	position: relative;
+}
+
+a:hover > img,
+a.selected > img {
+	border: 1px solid #ddf;
+}
+
+a:active > img { 
+	background: linear-gradient(to top, #87e0fd 0%,#53cbf1 40%,#05abe0 100%);
+	box-shadow: 1px 1px 1px #888;
+	top: 1px;
+	left: 1px;
 }

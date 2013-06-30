@@ -16,7 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-var PelletTower = function(opts) {
+var Tower = function(opts) {
 	var level = 1;
 	var range = 20;
 	var damage = 1;
@@ -28,10 +28,10 @@ var PelletTower = function(opts) {
 	var gridX = opts.x;
 	var gridY = opts.y;
 
-	var parent = new GameObject(sprites.pelletTower, ctx, {x: (gridX + 1) * 10, y: (gridY + 1) * 10, zIndex: 0});
+	var parent = new GameObject(opts.sprite, ctx, {x: (gridX + 1) * 10, y: (gridY + 1) * 10, zIndex: 0});
 	for(var prop in parent) { this[prop] = parent[prop]; }
 
-	var bullet = new GameObject(sprites.bullet, bulletCtx, {x: this.getX(), y: this.getY(), zIndex: 0, speed: 1});
+	var bullet = new GameObject(opts.bulletSprite, bulletCtx, {x: this.getX(), y: this.getY(), zIndex: 0, speed: 1});
 	var currentTarget = false;
 
 	this.getBullet = function() { return bullet; }
@@ -126,4 +126,24 @@ var PelletTower = function(opts) {
 		bullet.setUpdated(true);
 		return false;
 	};
+};
+
+var PelletTower = function(opts) {
+	opts = $.extend(opts || {}, {
+		sprite: sprites.pelletTower,
+		bulletSprite: sprites.bullet
+	});
+
+	var parent = new Tower(opts);
+	for(var prop in parent) { this[prop] = parent[prop]; }
+};
+
+var RocketTower = function(opts) {
+	opts = $.extend(opts || {}, {
+		sprite: sprites.rocketTower,
+		bulletSprite: sprites.rocket
+	});
+
+	var parent = new Tower(opts);
+	for(var prop in parent) { this[prop] = parent[prop]; }
 };

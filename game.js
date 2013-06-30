@@ -25,7 +25,6 @@ window.requestAnimFrame = (function(){
 	  };
 })();
 
-
 var settings = { scaleFactor: 1.0 };
 var sounds = {};
 var sprites = {
@@ -36,8 +35,12 @@ var sprites = {
 	rocket: new Sprite("rocket.svg", 20, 20)
 };
 
-window.onload = function() {
+var towerTypes = {
+	pelletTower: PelletTower,
+	rocketTower: RocketTower
+};
 
+$(document).ready(function() {
 	var c = document.getElementById('canvas');
 	var activeShape = false;
 	doResize();
@@ -66,7 +69,8 @@ window.onload = function() {
 	var currentLevel = 1;
 	var currentLives = 20;
 	var moneyz = 50;
-
+	var selectedTowerSprite = sprites.pelletTower;
+	var selectedTower = towerTypes.pelletTower;
 
 /*	if($.browser.msie) {
 		sounds.bullet = new Sample(new Audio("plop.mp3"), {channels: 5});
@@ -113,7 +117,7 @@ window.onload = function() {
 			if(blockNewPlacement) {
 				shinyMessage("still validating last placement");
 			} else {
-				var pelletTower = new PelletTower({bulletContext: bgCtx, context: mgCtx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
+				var pelletTower = new selectedTower({bulletContext: bgCtx, context: mgCtx, grid: grid, x: grid.getGhost().x, y: grid.getGhost().y});
 				if(moneyz < pelletTower.getCost()) { 
 					shinyMessage("not enough $");
 					return; 
@@ -225,7 +229,7 @@ window.onload = function() {
 		if(overTower > -1) {
 			
 		} else {
-			grid.drawGhost(sprites.pelletTower);
+			grid.drawGhost(selectedTowerSprite);
 		}
 
 		if(activeShape && activeShape.type == "circle") {
@@ -358,6 +362,13 @@ window.onload = function() {
 			txtCtx.clearRect(x, y - 27, width + 5, 32);
 		}, opts.timeout || 500);
 	}
-};
+	
+	$("a").on("click", function(e) {
+		$("a").removeClass("selected");
+		$(this).addClass("selected");
+		selectedTowerSprite = sprites[$(this).attr("id")];
+		selectedTower = towerTypes[$(this).attr("id")];
+	});
+});
 
 
