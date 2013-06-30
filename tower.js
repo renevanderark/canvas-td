@@ -18,10 +18,10 @@
 
 var Tower = function(opts) {
 	var level = 1;
-	var range = 20;
-	var damage = 1;
-	var cost = 10;
-	var maxBullets = 1;
+	var name = opts.name || "Tower";
+	var range = opts.range || 20;
+	var damage = opts.damage || 1;
+	var cost = opts.cost || 10;
 	var ctx = opts.context;
 	var bulletCtx = opts.bulletContext;
 	var grid = opts.grid;
@@ -31,7 +31,7 @@ var Tower = function(opts) {
 	var parent = new GameObject(opts.sprite, ctx, {x: (gridX + 1) * 10, y: (gridY + 1) * 10, zIndex: 0});
 	for(var prop in parent) { this[prop] = parent[prop]; }
 
-	var bullet = new GameObject(opts.bulletSprite, bulletCtx, {x: this.getX(), y: this.getY(), zIndex: 0, speed: 1});
+	var bullet = new GameObject(opts.bulletSprite, bulletCtx, {x: this.getX(), y: this.getY(), zIndex: 0, speed: opts.bulletSpeed || 1});
 	var currentTarget = false;
 
 	this.getBullet = function() { return bullet; }
@@ -102,7 +102,7 @@ var Tower = function(opts) {
 	this.getStats = function() {
 		var realRange = range / settings.scaleFactor;
 		return {
-			text: "Pellet tower level: " + level + ", range: " + range,
+			text: name + " level: " + level + ", range: " + range,
 			shape: {type: "circle", radius: realRange, pos: {x: this.getX() / settings.scaleFactor, y:this.getY() / settings.scaleFactor}}
 		};
 	};
@@ -130,6 +130,7 @@ var Tower = function(opts) {
 
 var PelletTower = function(opts) {
 	opts = $.extend(opts || {}, {
+		name: "Pellet tower",
 		sprite: sprites.pelletTower,
 		bulletSprite: sprites.bullet
 	});
@@ -140,8 +141,13 @@ var PelletTower = function(opts) {
 
 var RocketTower = function(opts) {
 	opts = $.extend(opts || {}, {
+		name: "Rocket launcher",
 		sprite: sprites.rocketTower,
-		bulletSprite: sprites.rocket
+		bulletSprite: sprites.rocket,
+		cost: 20,
+		damage: 5,
+		range: 60,
+		bulletSpeed: 0.6
 	});
 
 	var parent = new Tower(opts);
