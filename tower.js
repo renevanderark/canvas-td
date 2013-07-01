@@ -102,14 +102,24 @@ var Tower = function(opts) {
 	this.getStats = function() {
 		var realRange = range / settings.scaleFactor;
 		return {
-			text: name + " level: " + level + ", range: " + range,
+			text: name + " level: " + level + ", range: " + range + ", damage: " + damage,
 			shape: {type: "circle", radius: realRange, pos: {x: this.getX() / settings.scaleFactor, y:this.getY() / settings.scaleFactor}}
 		};
 	};
 
+	function _resetBullet() {
+		bullet.setX(parent.getX());
+		bullet.setY(parent.getY());
+		bullet.setAngle(parent.getAngle());
+		bullet.setUpdated(true);
+	}
+	
 	this.shootAtFirstWithinRange = function(creeps) {
 		if(currentTarget) { 
-			if(currentTarget.hasWon() || currentTarget.isDead()) { currentTarget = false; }
+			if(currentTarget.hasWon() || currentTarget.isDead()) { 
+				currentTarget = false; 
+				_resetBullet();
+			}
 			else { return _shoot(); }
 		}
 
@@ -119,11 +129,6 @@ var Tower = function(opts) {
 				return _shoot(); 
 			}
 		}
-		currentTarget = false;
-		bullet.setX(this.getX());
-		bullet.setY(this.getY());
-		bullet.setAngle(this.getAngle());
-		bullet.setUpdated(true);
 		return false;
 	};
 };
@@ -147,7 +152,7 @@ var RocketTower = function(opts) {
 		cost: 20,
 		damage: 5,
 		range: 60,
-		bulletSpeed: 0.6
+		bulletSpeed: 0.7
 	});
 
 	var parent = new Tower(opts);
