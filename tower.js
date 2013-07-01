@@ -139,7 +139,7 @@ var PelletTower = function(opts) {
 		sprite: sprites.pelletTower,
 		bulletSprite: sprites.bullet,
 		cost: 5,
-		damage: 8,
+		damage: 10,
 		range: 30,
 		bulletSpeed: 0.8
 	});
@@ -154,9 +154,9 @@ var RocketTower = function(opts) {
 		sprite: sprites.rocketTower,
 		bulletSprite: sprites.rocket,
 		cost: 20,
-		damage: 6,
+		damage: 8,
 		range: 60,
-		bulletSpeed: 0.7
+		bulletSpeed: 1.0
 	});
 
 	var parent = new Tower(opts);
