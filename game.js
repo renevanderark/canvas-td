@@ -283,8 +283,8 @@ $(document).ready(function() {
 				y: 15,
 				zIndex: 1,
 				speed: 0.3 + (currentLevel * 0.02),
-				hitpoints: currentLevel * 4,
-				value: 3
+				hitpoints: currentLevel * 20,
+				value: 1
 			});
 			creeps.push(creep);
 			creep.setTarget({x: 31, y: 15});
@@ -294,8 +294,8 @@ $(document).ready(function() {
 				y: -1,
 				zIndex: 1,
 				speed: 0.3 + (currentLevel * 0.02),
-				hitpoints: currentLevel * 4,
-				value: 3
+				hitpoints: currentLevel * 20,
+				value: 1
 			});
 			creeps.push(creep);
 			creep.setTarget({x: 15, y: 31});

@@ -124,7 +124,7 @@ var Tower = function(opts) {
 		}
 
 		for(var i in creeps) {
-			if(creeps[i] && _distanceTo(creeps[i]) <= range) {
+			if(creeps[i] && creeps[i].getX() > -1 && creeps[i].getY() > -1 && _distanceTo(creeps[i]) <= range) {
 				currentTarget = creeps[i];
 				return _shoot(); 
 			}
@@ -137,7 +137,11 @@ var PelletTower = function(opts) {
 	opts = $.extend(opts || {}, {
 		name: "Pellet tower",
 		sprite: sprites.pelletTower,
-		bulletSprite: sprites.bullet
+		bulletSprite: sprites.bullet,
+		cost: 5,
+		damage: 8,
+		range: 30,
+		bulletSpeed: 0.8
 	});
 
 	var parent = new Tower(opts);
@@ -150,7 +154,7 @@ var RocketTower = function(opts) {
 		sprite: sprites.rocketTower,
 		bulletSprite: sprites.rocket,
 		cost: 20,
-		damage: 5,
+		damage: 6,
 		range: 60,
 		bulletSpeed: 0.7
 	});
